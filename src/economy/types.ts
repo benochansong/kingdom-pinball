@@ -1,4 +1,5 @@
 import type { ResourceAmounts } from "../config/economy";
+import type { BuildingData } from "../building/types";
 export interface FacilityState {
   level: number;
   hits: number;
@@ -16,7 +17,8 @@ export interface SpecialState {
   achievements: number;
 }
 export interface EconomyData {
-  version: 2;
+  version: 3;
+  building?: BuildingData;
   id: string;
   resources: ResourceAmounts;
   storageLevel: number;

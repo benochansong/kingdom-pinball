@@ -10,6 +10,13 @@ import { ko } from "../data/strings";
 import { ECONOMY_TARGETS } from "../config/economy";
 import { EconomyManager } from "../economy/EconomyManager";
 import { EconomySaveManager } from "../economy/EconomySaveManager";
+import { BuildingManager } from "../building/BuildingManager";
+import { buildingConfig } from "../config/buildings";
+import {
+  applyBuildings,
+  buildingImpulse,
+} from "../building/BuildingPhysicsAdapter";
+import { TestBallSimulator } from "../building/TestBallSimulator";
 
 export class GameStateManager {
   readonly events = new EventBus();
@@ -20,6 +27,12 @@ export class GameStateManager {
   state: GameState = "menu";
   mode: "classic" | "kingdom" = "classic";
   economy?: EconomyManager;
+  builder?: BuildingManager;
+  testBall?: TestBallSimulator;
+  private buildPrevious: GameState = "playing";
+  get displayPhysics() {
+    return this.testBall?.physics ?? this.physics;
+  }
   saveConflict = false;
   remaining: number = PHYSICS.spheres;
   time = 0;
@@ -40,11 +53,15 @@ export class GameStateManager {
   }
   private bindPhysics(): void {
     this.physics.onHit = (contact) => this.hit(contact);
+    this.physics.onBuildingHit = (id, speed) => this.buildingHit(id, speed);
     this.physics.onImpact = (x, y, speed) => {
       if (speed > 160) this.events.emit("impact", { x, y, speed });
     };
   }
   start(tutorial = !this.save.data.tutorialDone): void {
+    this.testBall?.dispose();
+    this.testBall = undefined;
+    this.builder = undefined;
     this.finishRecord();
     this.mode = "classic";
     this.economy = undefined;
@@ -84,11 +101,18 @@ export class GameStateManager {
     this.economy.onNotice = (text) =>
       this.events.emit("message", { text, tone: "gold" });
     this.economy.resumeCheckpoint();
+    this.builder = new BuildingManager(this.economy);
+    if(this.economySave.recoveredBuildings)this.events.emit('message',{text:`안전하지 않은 건물 ${this.economySave.recoveredBuildings}개를 제외하고 저장을 복원했습니다. 자원과 기존 경제 기록은 유지했습니다.`,tone:'warning'});
+    this.builder.onChange = () => {
+      applyBuildings(this.physics, this.builder!.buildings);
+      this.events.emit("construction", { kind: "build" });
+    };
     const data = this.economy.data;
     this.physics.dispose();
     this.physics = new PinballPhysics(ECONOMY_TARGETS);
     this.bindPhysics();
     this.score = new ScoreManager();
+    applyBuildings(this.physics, this.builder.buildings);
     this.score.score = data.score;
     this.score.palaceHits = data.palaceHits;
     this.score.hits = data.totalHits;
@@ -151,9 +175,117 @@ export class GameStateManager {
     if (this.state === "playing") this.setState("paused");
   }
   resume(): void {
-    if (this.state === "paused" && !this.saveConflict) this.setState("playing");
+    if (this.state === "paused" && !this.saveConflict && !this.builder?.active)
+      this.setState("playing");
+  }
+  enterBuild(): boolean {
+    if (
+      this.mode !== "kingdom" ||
+      !this.builder ||
+      this.saveConflict ||
+      this.state === "over" ||
+      this.state === "menu"
+    )
+      return false;
+    if (this.builder.active) return true;
+    this.buildPrevious = this.state;
+    this.setState("paused");
+    this.builder.enter(
+      this.physics.ball ? { ...this.physics.ball.position } : undefined,
+    );
+    return true;
+  }
+  leaveBuild(): string | null {
+    if (!this.builder?.active) return null;
+    this.stopTestBall();
+    const error = this.builder.leave();
+    if (error) return error;
+    this.setState(this.buildPrevious);
+    return null;
+  }
+  startTestBall() {
+    if (!this.builder?.active || this.testBall) return;
+    this.builder.data.stats.tests++;
+    this.builder.data.tutorial = 5;
+    this.economy?.checkpoint();
+    this.testBall = new TestBallSimulator(this.builder.buildings);
+  }
+  stopTestBall() {
+    this.testBall?.dispose();
+    this.testBall = undefined;
+  }
+  private buildingHit(id: string, speed: number) {
+    const b = this.builder?.buildings.find((b) => b.id === id);
+    if (!b || this.state !== "playing") return;
+    const valid =
+      !this.tilt.tilted &&
+      this.time >= this.recovery.suppressUntil &&
+      this.time - b.lastHit >= Math.max(240, 600 - b.level * 30) &&
+      speed > 40;
+    if (!valid) return;
+    b.lastHit = this.time;
+    if(b.type==='reflector'){
+      const p=b.production;p.recent=p.recent.filter(t=>this.time-t<8000);p.recent.push(this.time);
+      if(p.recent.length>=7+b.level&&p.overloadedUntil<=this.time){p.overloadedUntil=this.time+6000;p.recent=[];}
+      const body=this.physics.buildingBodies.get(id);if(body)body.restitution=p.overloadedUntil>this.time?.35:1;
+      if(p.overloadedUntil>this.time)return;
+    }
+    buildingImpulse(this.physics, b);
+    const c = buildingConfig(b.type)!;
+    const production = this.economy?.harvest(id, speed, true);
+    if (production)
+      this.events.emit("production", {
+        resource: production.facility.resource,
+        amount: production.amount,
+        overflow: production.overflow,
+        multiplier: production.multiplier,
+        strength: production.strength,
+        x: b.x,
+        y: b.y,
+      });
+    const target = {
+      id,
+      kind: "stone" as const,
+      name: c.name,
+      x: b.x,
+      y: b.y,
+      radius: c.width / 2,
+      points: 100,
+      kick: 0,
+      color: 0xd8c17b,
+    };
+    const result = this.score.hit(target, this.time, true);
+    if (result)
+      this.events.emit("hit", {
+        id,
+        kind: target.kind,
+        x: b.x,
+        y: b.y,
+        points: result.points,
+        combo: this.score.combo.count,
+        multiplier: this.score.combo.multiplier,
+      });
+    if (c.category === "physics" && this.builder)
+      this.builder.data.stats.reflectorCombo = Math.max(
+        this.builder.data.stats.reflectorCombo,
+        this.score.combo.count,
+      );
+    if (this.time >= b.readyAt) {
+      b.charge++;
+      if (b.charge >= 5) {
+        b.charge = 0;
+        b.readyAt = this.time + (b.type === "altar" ? 30000 : 10000);
+        if (b.type === "altar")
+          this.economy?.resources.grant("energy", 5 + b.level - 1);
+        else if (c.category === "military") this.score.score += 200;
+        this.events.emit("message", { text: `${c.name} 활성화`, tone: "gold" });
+      }
+    }
+    this.checkpoint();
   }
   menu(): void {
+    this.stopTestBall();
+    if (this.builder) this.builder.active = false;
     this.finishRecord();
     this.physics.dispose();
     this.physics = new PinballPhysics();
@@ -177,6 +309,10 @@ export class GameStateManager {
     this.charge = 0;
   }
   flipper(side: "left" | "right", down: boolean): void {
+    if (this.testBall) {
+      this.testBall.physics[side].held = down;
+      return;
+    }
     if (this.state !== "playing") return;
     const flipper = this.physics[side];
     if (down && !flipper.held && !this.tilt.tilted)
@@ -187,6 +323,13 @@ export class GameStateManager {
       this.tutorialStep = 3;
   }
   chargeStart(): void {
+    if (this.testBall) {
+      if (!this.testBall.physics.launched) {
+        this.testBall.charging = true;
+        this.testBall.charge = 0;
+      }
+      return;
+    }
     if (
       this.state !== "playing" ||
       !this.physics.ball ||
@@ -199,6 +342,10 @@ export class GameStateManager {
     if (this.tutorialStep === 0) this.tutorialStep = 1;
   }
   chargeRelease(): void {
+    if (this.testBall) {
+      this.testBall.release();
+      return;
+    }
     if (this.state !== "playing" || !this.charging) return;
     if (this.mode === "kingdom" && !this.economy?.beginLaunch()) {
       this.charging = false;
@@ -237,6 +384,10 @@ export class GameStateManager {
     }
   }
   update(frameMs: number): void {
+    if (this.testBall) {
+      this.testBall.update(frameMs);
+      return;
+    }
     if (this.state !== "playing") return;
     this.accumulator += Math.max(0, Math.min(frameMs, PHYSICS.maxFrameMs));
     while (this.accumulator >= PHYSICS.stepMs && this.state === "playing") {
@@ -382,6 +533,7 @@ export class GameStateManager {
     });
   }
   dispose(): void {
+    this.stopTestBall();
     this.physics.dispose();
     this.events.clear();
   }

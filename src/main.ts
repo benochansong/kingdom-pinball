@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 import "./style.css";
 import "./economy.css";
+import "./building.css";
+import { BuildUI } from "./ui/BuildUI";
 import { GameStateManager } from "./core/GameStateManager";
 import { AudioManager } from "./audio/AudioManager";
 import { UIManager } from "./ui/UIManager";
@@ -12,6 +14,7 @@ const model = new GameStateManager();
 const audio = new AudioManager(model);
 const ui = new UIManager(model, audio);
 const economyUI = new EconomyUI(ui, model);
+const buildUI = new BuildUI(ui, model);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -40,6 +43,7 @@ const controlCodes = [
 window.addEventListener(
   "keydown",
   (event) => {
+    if (buildUI.handleKey(event)) return;
     if (!controlCodes.includes(event.code)) return;
     if (
       (event.target as HTMLElement).matches("input, select, textarea") ||
@@ -49,7 +53,8 @@ window.addEventListener(
     if (
       event.code === "Space" &&
       (event.target as HTMLElement).matches("button") &&
-      model.state !== "playing"
+      model.state !== "playing" &&
+      !model.testBall
     )
       return;
     event.preventDefault();
@@ -101,6 +106,14 @@ window.addEventListener(
   "blur",
   () => {
     keys.clear();
+    if (model.testBall) {
+      model.testBall.paused = true;
+      model.testBall.physics.left.held = false;
+      model.testBall.physics.right.held = false;
+      model.testBall.charging = false;
+      model.testBall.notice =
+        "창이 비활성화되어 멈췄습니다. R로 테스트를 재개하세요.";
+    }
     ui.autoPause();
   },
   { signal: abort.signal },
@@ -134,6 +147,7 @@ if (import.meta.hot)
     model.checkpoint();
     abort.abort();
     economyUI.dispose();
+    buildUI.dispose();
     ui.dispose();
     audio.dispose();
     model.dispose();

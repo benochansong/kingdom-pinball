@@ -6,12 +6,27 @@ import {
   type ResourceId,
 } from "../config/economy";
 import type { EconomyData } from "./types";
+import { activeSynergies } from "../building/BuildingManager";
 
 export class ResourceManager {
   constructor(readonly data: EconomyData) {}
   capacity(resource: ResourceId): number {
+    const buildings = this.data.building?.buildings ?? [];
+    const extra =
+      resource === "energy"
+        ? 0
+        : buildings.reduce(
+            (s, b) =>
+              s +
+              (b.type === "warehouse"
+                ? 0.1 * b.level
+                : b.type === "treasury" && resource === "gold"
+                  ? 0.25 * b.level
+                  : 0),
+            0,
+          ) + (activeSynergies(this.data).includes("trade") ? 0.1 : 0);
     return (
-      RESOURCES[resource].capacity *
+      Math.floor(RESOURCES[resource].capacity * (1 + extra)) *
       (resource === "energy"
         ? 1
         : ECONOMY.storageMultipliers[this.data.storageLevel - 1])

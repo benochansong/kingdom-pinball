@@ -97,7 +97,7 @@ export class PinballScene extends Phaser.Scene {
       texture.refresh();
       this.background.setTexture("table").setDisplaySize(600, 900);
     }
-    const ball = this.model.physics.ball;
+    const ball = this.model.displayPhysics.ball;
     this.sphere.setVisible(!!ball);
     this.shadow.setVisible(!!ball);
     if (ball) {
@@ -113,7 +113,7 @@ export class PinballScene extends Phaser.Scene {
     else this.sphere.clearTint();
     const g = this.moving;
     g.clear();
-    for (const f of [this.model.physics.left, this.model.physics.right]) {
+    for (const f of [this.model.displayPhysics.left, this.model.displayPhysics.right]) {
       const tip = f.tip,
         pivot = f.pivot;
       g.lineStyle(25, 0x071b1c, 0.5);
@@ -143,9 +143,9 @@ export class PinballScene extends Phaser.Scene {
       );
     g.lineStyle(5, 0xb6c3b1);
     g.lineBetween(544, 817 + compressed, 564, 817 + compressed);
-    const gate = this.model.physics.gate;
-    g.lineStyle(3, this.model.physics.gateClosed ? 0xd7c187 : 0x6e8d83, 0.9);
-    const angle = this.model.physics.gateClosed ? gate.angle : gate.angle - 1;
+    const gate = this.model.displayPhysics.gate;
+    g.lineStyle(3, this.model.displayPhysics.gateClosed ? 0xd7c187 : 0x6e8d83, 0.9);
+    const angle = this.model.displayPhysics.gateClosed ? gate.angle : gate.angle - 1;
     g.lineBetween(
       480,
       150,

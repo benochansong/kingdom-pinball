@@ -54,9 +54,9 @@ export class EconomyUI {
     ui.root.querySelector(".tagline")!.textContent =
       "Bounce, Harvest, Prosper!";
     ui.root.querySelector(".edition-note")!.innerHTML =
-      "PHASE 02 <span>THE AGE OF PROSPERITY</span>";
+      "PHASE 03 <span>THE ROYAL ARCHITECT</span>";
     ui.root.querySelector(".edition")!.innerHTML =
-      "THE GREENWOOD CHRONICLES <span>·</span> CHAPTER II";
+      "THE GREENWOOD CHRONICLES <span>·</span> CHAPTER III";
     ui.root
       .querySelector(".menu-links")!
       .insertAdjacentHTML(
@@ -253,7 +253,7 @@ export class EconomyUI {
         const ok = e.trade(id, batches);
         this.feedback =
           ok && t
-            ? `${RESOURCES[t.from].name} −${format(t.take * batches)} · ${RESOURCES[t.to].name} +${format(t.give * batches)}`
+            ? `${RESOURCES[t.from].name} −${format(e.market.price(id) * batches)} · ${RESOURCES[t.to].name} +${format(t.give * batches)}`
             : "거래할 자원 또는 저장 공간이 부족합니다.";
         this.market();
         return true;
@@ -380,7 +380,7 @@ export class EconomyUI {
             n =
               this.marketQuantity === "max" ? max : Number(this.marketQuantity),
             enabled = n > 0 && n <= max;
-          return `<article class="trade-card"><div><b>${resourceIcon(t.from)} ${RESOURCES[t.from].name} ${t.take} <span>⇄</span> ${resourceIcon(t.to)} ${RESOURCES[t.to].name} ${t.give}</b><p>보유 ${RESOURCES[t.from].name} ${format(e.data.resources[t.from])} · ${RESOURCES[t.to].name} 빈 공간 ${format(e.resources.space(t.to))}</p><small>미리 보기: −${format(t.take * n)} ${RESOURCES[t.from].name} / +${format(t.give * n)} ${RESOURCES[t.to].name}</small></div><button class="primary" data-action="trade:${t.id}:${n}" ${enabled ? "" : "disabled"}>${enabled ? `${n}회 거래` : "자원·공간 부족"}</button></article>`;
+          return `<article class="trade-card"><div><b>${resourceIcon(t.from)} ${RESOURCES[t.from].name} ${e.market.price(t.id)} <span>⇄</span> ${resourceIcon(t.to)} ${RESOURCES[t.to].name} ${t.give}</b><p>보유 ${RESOURCES[t.from].name} ${format(e.data.resources[t.from])} · ${RESOURCES[t.to].name} 빈 공간 ${format(e.resources.space(t.to))}</p><small>미리 보기: −${format(e.market.price(t.id) * n)} ${RESOURCES[t.from].name} / +${format(t.give * n)} ${RESOURCES[t.to].name}</small></div><button class="primary" data-action="trade:${t.id}:${n}" ${enabled ? "" : "disabled"}>${enabled ? `${n}회 거래` : "자원·공간 부족"}</button></article>`;
         })
         .join("")}</div><button data-action="close">닫기</button>`,
     );

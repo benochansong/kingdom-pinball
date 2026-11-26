@@ -13,6 +13,8 @@ import { MarketSystem } from "./MarketSystem";
 import { ObjectiveManager } from "./ObjectiveManager";
 import { EconomySaveManager, freshEconomy } from "./EconomySaveManager";
 import type { EconomyData, FacilityStatus } from "./types";
+import { buildingConfig } from "../config/buildings";
+import { buildingProductionBonus } from "../building/BuildingManager";
 
 export interface ProductionResult {
   facility: FacilityConfig;
@@ -67,8 +69,11 @@ export class EconomyManager {
     normalSpeed: number,
     valid: boolean,
   ): ProductionResult | undefined {
-    const d = this.data,
-      config = FACILITIES.find((f) => f.target === target);
+    const d = this.data;
+    const built = d.building?.buildings.find((b) => b.id === target);
+    const config = built
+      ? FACILITIES.find((f) => f.id === buildingConfig(built.type)?.production)
+      : FACILITIES.find((f) => f.target === target);
     if (
       !valid ||
       !config ||
@@ -77,8 +82,12 @@ export class EconomyManager {
       normalSpeed <= 40
     )
       return;
-    const f = d.facilities[config.id];
-    if (d.time - f.lastHit < ECONOMY.cooldownMs) return;
+    const f = built?.production ?? d.facilities[config.id];
+    if (
+      d.time - f.lastHit <
+      ECONOMY.cooldownMs * (built ? 1 - (f.level - 1) * 0.05 : 1)
+    )
+      return;
     f.lastHit = d.time;
     f.hits++;
     d.validHits++;
@@ -117,6 +126,7 @@ export class EconomyManager {
         ECONOMY.levelMultipliers[f.level - 1] *
         this.multiplier *
         this.productionBonus(config.resource) *
+        buildingProductionBonus(d, config.resource) *
         overload,
     );
     const result = this.resources.grant(

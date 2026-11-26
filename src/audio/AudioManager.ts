@@ -12,6 +12,7 @@ export class AudioManager {
   constructor(private game: GameStateManager) {
     const bus = game.events;
     this.disposers = [
+      bus.on('construction',({kind})=>{this.tone(kind==='invalid'?130:kind==='select'?440:260,.14,'triangle',.12,kind==='build'?660:90);}),
       bus.on("flipper", () => this.tone(95, 0.065, "triangle", 0.25, 35)),
       bus.on("launch", ({ power }) => {
         this.tone(120 + power * 100, 0.28, "sawtooth", 0.13, 900);

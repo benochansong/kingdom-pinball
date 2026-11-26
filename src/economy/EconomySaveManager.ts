@@ -9,11 +9,13 @@ import {
 } from "../config/economy";
 import type { StorageLike } from "../systems/SaveManager";
 import type { EconomyData } from "./types";
+import { sanitizeBuildings } from "../building/BuildingSave";
+import { ResourceManager } from "./ResourceManager";
 export const ECONOMY_KEY = "kingdom-pinball:economy:v2";
 export const amounts = (value = 0): ResourceAmounts =>
   Object.fromEntries(RESOURCE_IDS.map((r) => [r, value])) as ResourceAmounts;
 export const freshEconomy = (): EconomyData => ({
-  version: 2,
+  version: 3,
   id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
   resources: Object.fromEntries(
     RESOURCE_IDS.map((r) => [r, RESOURCES[r].initial]),
@@ -89,7 +91,7 @@ const object = (x: unknown): Record<string, unknown> =>
 /** Explicit field allow-list also handles the preliminary v1 economy schema. Classic v1 stays intact. */
 export function sanitizeEconomy(raw: unknown): EconomyData | null {
   const input = object(raw);
-  if (input.version !== 1 && input.version !== 2) return null;
+  if (![1, 2, 3].includes(input.version as number)) return null;
   const data = freshEconomy();
   if (typeof input.id === "string" && /^[a-z0-9-]{1,40}$/.test(input.id))
     data.id = input.id;
@@ -218,10 +220,19 @@ export function sanitizeEconomy(raw: unknown): EconomyData | null {
     /^\d{4}-\d{2}-\d{2}$/.test(input.createdAt)
   )
     data.createdAt = input.createdAt;
+  data.building = sanitizeBuildings(input.building);
+  const capacity = new ResourceManager(data);
+  for (const r of RESOURCE_IDS)
+    data.resources[r] = finite(
+      object(input.resources)[r],
+      data.resources[r],
+      capacity.capacity(r),
+    );
   return data;
 }
 export class EconomySaveManager {
   available = true;
+  recoveredBuildings=0;
   constructor(private storage?: StorageLike) {
     try {
       if (!storage) this.storage = globalThis.localStorage;
@@ -234,7 +245,10 @@ export class EconomySaveManager {
       const raw =
         this.storage?.getItem(ECONOMY_KEY) ??
         this.storage?.getItem("kingdom-pinball:economy:v1");
-      return raw ? sanitizeEconomy(JSON.parse(raw)) : null;
+      const parsed=raw?JSON.parse(raw):null;
+      const clean=parsed?sanitizeEconomy(parsed):null;
+      this.recoveredBuildings=Math.max(0,(Array.isArray(parsed?.building?.buildings)?parsed.building.buildings.length:0)-(clean?.building?.buildings.length??0));
+      return clean;
     } catch {
       this.available = false;
       return null;

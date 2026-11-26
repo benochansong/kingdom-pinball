@@ -3,6 +3,7 @@ import type { ResourceId } from "../config/economy";
 
 /** The single extension seam for later resource, building, and battle systems. */
 export interface GameEvents {
+  construction:{kind:'build'|'invalid'|'select'|'demolish'};
   hit: {
     id: string;
     kind: TargetKind;
