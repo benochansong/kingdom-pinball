@@ -1,0 +1,10 @@
+/** Keep user-facing copy centralized for a future locale selector. */
+export const ko = {
+  title: 'KINGDOM PINBALL', tagline: 'Bounce, Build, Conquer!', kingdom: 'GREENWOOD KINGDOM',
+  start: '게임 시작', how: '플레이 방법', settings: '설정', scores: '최고 기록', credits: '크레딧',
+  ready: 'Space를 눌러 충전 · 놓아서 발사', lost: '코어 스피어를 잃었습니다',
+  tilt: 'TILT — 이번 스피어의 플리퍼와 점수가 비활성화됩니다',
+  recovery: '스피어의 경로를 복구했습니다', return: '스피어를 발사대로 회수했습니다 · 차감 없음',
+  royal: 'ROYAL BONUS', paused: '잠시 쉬어가세요', over: '이번 원정이 끝났습니다',
+  combos: ['NICE!', 'GREAT!', 'AMAZING!', 'LEGENDARY!', 'ROYAL COMBO!'],
+};
