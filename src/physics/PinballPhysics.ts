@@ -24,8 +24,8 @@ export class PinballPhysics {
   gateClosed = false;
   onHit: (contact: Contact) => void = () => {};
   onImpact: (x: number, y: number, speed: number) => void = () => {};
-  onBuildingHit: (id:string,speed:number)=>void=()=>{};
-  readonly buildingBodies = new Map<string,Matter.Body>();
+  onBuildingHit: (id: string, speed: number) => void = () => {};
+  readonly buildingBodies = new Map<string, Matter.Body>();
   private targets = new Map<number, TargetDefinition>();
   private incoming = { x: 0, y: 0 };
   private nextTargets: TargetDefinition[];
@@ -80,13 +80,15 @@ export class PinballPhysics {
               ? pair.bodyA
               : undefined;
         if (!other) continue;
-        if (other.label.startsWith('building-')) {
-          const n=pair.collision.normal;
-          const normalSpeed=Math.abs(this.incoming.x*n.x+this.incoming.y*n.y);
-          if(normalSpeed>40)this.onBuildingHit(other.label,normalSpeed);
+        if (other.label.startsWith("building-")) {
+          const n = pair.collision.normal;
+          const normalSpeed = Math.abs(
+            this.incoming.x * n.x + this.incoming.y * n.y,
+          );
+          if (normalSpeed > 40) this.onBuildingHit(other.label, normalSpeed);
           continue;
         }
-        if(other.isSensor)continue;
+        if (other.isSensor) continue;
         const speed = Math.hypot(this.incoming.x, this.incoming.y);
         const target = this.targets.get(other.id);
         if (target) {

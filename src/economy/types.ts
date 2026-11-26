@@ -1,5 +1,6 @@
 import type { ResourceAmounts } from "../config/economy";
 import type { BuildingData } from "../building/types";
+import type { ArmyData } from "../army/types";
 export interface FacilityState {
   level: number;
   hits: number;
@@ -17,7 +18,8 @@ export interface SpecialState {
   achievements: number;
 }
 export interface EconomyData {
-  version: 3;
+  version: 4;
+  army?: ArmyData;
   building?: BuildingData;
   id: string;
   resources: ResourceAmounts;

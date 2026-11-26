@@ -17,6 +17,8 @@ import {
   buildingImpulse,
 } from "../building/BuildingPhysicsAdapter";
 import { TestBallSimulator } from "../building/TestBallSimulator";
+import { ArmyManager } from "../army/ArmyManager";
+import type { BattleRecord } from "../army/types";
 
 export class GameStateManager {
   readonly events = new EventBus();
@@ -29,6 +31,21 @@ export class GameStateManager {
   economy?: EconomyManager;
   builder?: BuildingManager;
   testBall?: TestBallSimulator;
+  army?: ArmyManager;
+  lastBattleResult?: BattleRecord;
+  private practice?: {
+    economy: EconomyManager;
+    builder: BuildingManager;
+    army: ArmyManager;
+    physics: PinballPhysics;
+    score: ScoreManager;
+    tilt: TiltSystem;
+    recovery: BallRecoverySystem;
+    time: number;
+  };
+  get practicing() {
+    return !!this.practice;
+  }
   private buildPrevious: GameState = "playing";
   get displayPhysics() {
     return this.testBall?.physics ?? this.physics;
@@ -59,6 +76,8 @@ export class GameStateManager {
     };
   }
   start(tutorial = !this.save.data.tutorialDone): void {
+    this.restorePractice();
+    this.army = undefined;
     this.testBall?.dispose();
     this.testBall = undefined;
     this.builder = undefined;
@@ -86,6 +105,8 @@ export class GameStateManager {
     this.events.emit("message", { text: ko.ready });
   }
   startKingdom(fresh: boolean): void {
+    this.restorePractice();
+    this.stopTestBall();
     this.finishRecord();
     if (fresh) {
       const old = this.economySave.load();
@@ -102,7 +123,13 @@ export class GameStateManager {
       this.events.emit("message", { text, tone: "gold" });
     this.economy.resumeCheckpoint();
     this.builder = new BuildingManager(this.economy);
-    if(this.economySave.recoveredBuildings)this.events.emit('message',{text:`안전하지 않은 건물 ${this.economySave.recoveredBuildings}개를 제외하고 저장을 복원했습니다. 자원과 기존 경제 기록은 유지했습니다.`,tone:'warning'});
+    this.army = new ArmyManager(this.economy);
+    this.bindArmy();
+    if (this.economySave.recoveredBuildings)
+      this.events.emit("message", {
+        text: `안전하지 않은 건물 ${this.economySave.recoveredBuildings}개를 제외하고 저장을 복원했습니다. 자원과 기존 경제 기록은 유지했습니다.`,
+        tone: "warning",
+      });
     this.builder.onChange = () => {
       applyBuildings(this.physics, this.builder!.buildings);
       this.events.emit("construction", { kind: "build" });
@@ -142,6 +169,7 @@ export class GameStateManager {
     return true;
   }
   endKingdom(): void {
+    if (this.army?.data.battle) this.army.finish("defeat");
     this.syncEconomy();
     this.economy?.end();
     this.setState("over");
@@ -159,6 +187,86 @@ export class GameStateManager {
     if (this.saveConflict) return;
     this.syncEconomy();
     this.economy?.checkpoint();
+  }
+  private bindArmy() {
+    if (!this.army) return;
+    this.army.onNotice = (text) =>
+      this.events.emit("message", { text, tone: "gold" });
+    this.army.combat.onSound = (kind) =>
+      this.events.emit("militarySound", { kind });
+    this.army.onResult = (record) => {
+      this.lastBattleResult = structuredClone(record);
+      if (this.practice) this.restorePractice();
+      this.setState("paused");
+      this.events.emit("battleResult", record);
+    };
+  }
+  startTraining(scenario: number, practice: boolean): string | null {
+    if (
+      !this.economy ||
+      !this.army ||
+      !this.builder ||
+      this.builder.active ||
+      this.saveConflict ||
+      this.army.data.battle ||
+      !["playing", "paused"].includes(this.state)
+    )
+      return "현재 상태에서 훈련을 시작할 수 없습니다.";
+    if (practice) {
+      this.checkpoint();
+      this.practice = {
+        economy: this.economy,
+        builder: this.builder,
+        army: this.army,
+        physics: this.physics,
+        score: this.score,
+        tilt: this.tilt,
+        recovery: this.recovery,
+        time: this.time,
+      };
+      this.economy = new EconomyManager(
+        structuredClone(this.economy.data),
+        new EconomySaveManager({ getItem: () => null, setItem: () => {} }),
+      );
+      this.builder = new BuildingManager(this.economy);
+      this.army = new ArmyManager(this.economy);
+      this.bindArmy();
+      this.physics = new PinballPhysics(ECONOMY_TARGETS);
+      applyBuildings(this.physics, this.builder.buildings);
+      this.bindPhysics();
+      this.physics.spawn();
+      this.score = new ScoreManager();
+      this.tilt = new TiltSystem();
+      this.recovery = new BallRecoverySystem();
+      this.economy.data.launchState = "ready";
+    }
+    const error = this.army.startBattle(
+      scenario,
+      practice ? "practice" : "challenge",
+    );
+    if (error) {
+      this.restorePractice();
+      return error;
+    }
+    this.setState("playing");
+    return null;
+  }
+  restorePractice() {
+    const p = this.practice;
+    if (!p) return;
+    this.physics.dispose();
+    this.economy = p.economy;
+    this.builder = p.builder;
+    this.army = p.army;
+    this.physics = p.physics;
+    this.score = p.score;
+    this.tilt = p.tilt;
+    this.recovery = p.recovery;
+    this.time = p.time;
+    this.practice = undefined;
+    this.accumulator = 0;
+    this.bindPhysics();
+    this.bindArmy();
   }
   invalidateEconomy(): void {
     if (this.mode !== "kingdom") return;
@@ -179,6 +287,7 @@ export class GameStateManager {
       this.setState("playing");
   }
   enterBuild(): boolean {
+    if (this.practicing) return false;
     if (
       this.mode !== "kingdom" ||
       !this.builder ||
@@ -223,12 +332,19 @@ export class GameStateManager {
       this.time - b.lastHit >= Math.max(240, 600 - b.level * 30) &&
       speed > 40;
     if (!valid) return;
+    this.army?.hit(id, this.time, speed, true);
     b.lastHit = this.time;
-    if(b.type==='reflector'){
-      const p=b.production;p.recent=p.recent.filter(t=>this.time-t<8000);p.recent.push(this.time);
-      if(p.recent.length>=7+b.level&&p.overloadedUntil<=this.time){p.overloadedUntil=this.time+6000;p.recent=[];}
-      const body=this.physics.buildingBodies.get(id);if(body)body.restitution=p.overloadedUntil>this.time?.35:1;
-      if(p.overloadedUntil>this.time)return;
+    if (b.type === "reflector") {
+      const p = b.production;
+      p.recent = p.recent.filter((t) => this.time - t < 8000);
+      p.recent.push(this.time);
+      if (p.recent.length >= 7 + b.level && p.overloadedUntil <= this.time) {
+        p.overloadedUntil = this.time + 6000;
+        p.recent = [];
+      }
+      const body = this.physics.buildingBodies.get(id);
+      if (body) body.restitution = p.overloadedUntil > this.time ? 0.35 : 1;
+      if (p.overloadedUntil > this.time) return;
     }
     buildingImpulse(this.physics, b);
     const c = buildingConfig(b.type)!;
@@ -284,6 +400,7 @@ export class GameStateManager {
     this.checkpoint();
   }
   menu(): void {
+    this.restorePractice();
     this.stopTestBall();
     if (this.builder) this.builder.active = false;
     this.finishRecord();
@@ -293,6 +410,7 @@ export class GameStateManager {
     this.physics.spawn();
     this.mode = "classic";
     this.economy = undefined;
+    this.army = undefined;
     this.saveConflict = false;
     this.score = new ScoreManager();
     this.time = 0;
@@ -402,6 +520,9 @@ export class GameStateManager {
       this.score.combo.tick(this.time);
       this.tilt.update(dt);
       this.economy?.tick(this.time);
+      const beforeBall = this.physics.ball
+        ? { ...this.physics.ball.position }
+        : undefined;
       this.physics.step(dt, !this.tilt.tilted);
       const recovered = this.recovery.update(this.physics, dt, this.time);
       if (recovered) {
@@ -418,6 +539,18 @@ export class GameStateManager {
           text: recovered === "return" ? ko.return : ko.recovery,
         });
       }
+      if (beforeBall && this.physics.ball)
+        this.army?.combat.sphere(
+          beforeBall,
+          this.physics.ball.position,
+          this.physics.ball.speed * 60,
+          this.time,
+          this.physics.launched &&
+            !this.tilt.tilted &&
+            this.time >= this.recovery.suppressUntil,
+        );
+      this.army?.tick(dt, this.time);
+      if (this.state !== "playing") break;
       if (this.physics.ball && this.physics.ball.position.y > PHYSICS.drainY)
         this.drain();
       if (
@@ -447,6 +580,7 @@ export class GameStateManager {
         this.state === "playing",
     );
     if (!result) return;
+    this.army?.hit(target.id, this.time, normalSpeed, true);
     this.syncEconomy();
     const production = this.economy?.harvest(target.id, normalSpeed, true);
     if (production)
@@ -469,6 +603,8 @@ export class GameStateManager {
       multiplier: this.score.combo.multiplier,
     });
     if (result.royal) {
+      if (this.army)
+        this.army.data.morale = Math.min(100, this.army.data.morale + 4);
       this.economy?.royal();
       this.events.emit("royal", { x: target.x, y: target.y, points: 3000 });
     }
@@ -481,6 +617,13 @@ export class GameStateManager {
   }
   private drain(): void {
     if (!this.physics.ball) return;
+    if (this.practice) {
+      this.physics.spawn();
+      this.tilt.reset();
+      this.recovery.reset();
+      if (this.economy) this.economy.data.launchState = "ready";
+      return;
+    }
     if (this.mode === "kingdom" && this.economy) {
       this.physics.removeBall();
       this.clearInputs();
@@ -533,6 +676,7 @@ export class GameStateManager {
     });
   }
   dispose(): void {
+    this.restorePractice();
     this.stopTestBall();
     this.physics.dispose();
     this.events.clear();

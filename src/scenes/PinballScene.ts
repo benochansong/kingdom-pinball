@@ -5,6 +5,7 @@ import { EffectsManager } from "../effects/EffectsManager";
 import type { AudioManager } from "../audio/AudioManager";
 import { ECONOMY_TARGETS, FACILITIES } from "../config/economy";
 import { TARGETS } from "../data/table";
+import { ArmyRenderer } from "../army/ArmyRenderer";
 
 export class PinballScene extends Phaser.Scene {
   private moving!: Phaser.GameObjects.Graphics;
@@ -14,6 +15,7 @@ export class PinballScene extends Phaser.Scene {
   private visualTime = 0;
   private background!: Phaser.GameObjects.Image;
   private artKey = "";
+  private armyRenderer?: ArmyRenderer;
   constructor(
     private model: GameStateManager,
     private audio: AudioManager,
@@ -55,6 +57,7 @@ export class PinballScene extends Phaser.Scene {
     this.textures.addCanvas("sphere", canvas);
     this.effects = new EffectsManager(this, this.model);
     this.moving = this.add.graphics().setDepth(15);
+    this.armyRenderer = new ArmyRenderer(this, this.model);
     this.shadow = this.add.ellipse(0, 0, 23, 13, 0x051c20, 0.65).setDepth(18);
     this.sphere = this.add
       .image(554, 802, "sphere")
@@ -69,6 +72,7 @@ export class PinballScene extends Phaser.Scene {
     const dt = Math.min(delta, 50) / 1000;
     if (this.model.state !== "paused") this.visualTime += dt;
     this.effects.update(dt);
+    this.armyRenderer?.draw();
     const economy =
       this.model.mode === "kingdom" ? this.model.economy : undefined;
     const artKey = `${this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;
@@ -113,7 +117,10 @@ export class PinballScene extends Phaser.Scene {
     else this.sphere.clearTint();
     const g = this.moving;
     g.clear();
-    for (const f of [this.model.displayPhysics.left, this.model.displayPhysics.right]) {
+    for (const f of [
+      this.model.displayPhysics.left,
+      this.model.displayPhysics.right,
+    ]) {
       const tip = f.tip,
         pivot = f.pivot;
       g.lineStyle(25, 0x071b1c, 0.5);
@@ -144,8 +151,14 @@ export class PinballScene extends Phaser.Scene {
     g.lineStyle(5, 0xb6c3b1);
     g.lineBetween(544, 817 + compressed, 564, 817 + compressed);
     const gate = this.model.displayPhysics.gate;
-    g.lineStyle(3, this.model.displayPhysics.gateClosed ? 0xd7c187 : 0x6e8d83, 0.9);
-    const angle = this.model.displayPhysics.gateClosed ? gate.angle : gate.angle - 1;
+    g.lineStyle(
+      3,
+      this.model.displayPhysics.gateClosed ? 0xd7c187 : 0x6e8d83,
+      0.9,
+    );
+    const angle = this.model.displayPhysics.gateClosed
+      ? gate.angle
+      : gate.angle - 1;
     g.lineBetween(
       480,
       150,

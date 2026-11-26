@@ -1,11 +1,13 @@
 import { TestBallSimulator } from "./TestBallSimulator";
 import type { BuildingEntity } from "./types";
-const verified=new Set<string>();
+const verified = new Set<string>();
 /** Sample real Matter trajectories after static topology checks; this is not a proof of every future shot. */
 export function probeLayout(buildings: BuildingEntity[]): string | null {
   if (!buildings.length) return null;
-  const signature=JSON.stringify(buildings.map(({type,x,y,angle,level})=>[type,x,y,angle,level]));
-  if(verified.has(signature))return null;
+  const signature = JSON.stringify(
+    buildings.map(({ type, x, y, angle, level }) => [type, x, y, angle, level]),
+  );
+  if (verified.has(signature)) return null;
   for (const power of [0.65, 0.85, 1]) {
     const test = new TestBallSimulator(buildings);
     test.physics.launch(power);
@@ -31,5 +33,7 @@ export function probeLayout(buildings: BuildingEntity[]): string | null {
       test.dispose();
     }
   }
-  if(verified.size>=64)verified.delete(verified.values().next().value!);verified.add(signature);return null;
+  if (verified.size >= 64) verified.delete(verified.values().next().value!);
+  verified.add(signature);
+  return null;
 }

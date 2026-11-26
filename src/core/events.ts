@@ -1,9 +1,12 @@
 import type { TargetKind } from "../data/table";
 import type { ResourceId } from "../config/economy";
+import type { BattleRecord } from "../army/types";
 
 /** The single extension seam for later resource, building, and battle systems. */
 export interface GameEvents {
-  construction:{kind:'build'|'invalid'|'select'|'demolish'};
+  battleResult: BattleRecord;
+  militarySound: { kind: string };
+  construction: { kind: "build" | "invalid" | "select" | "demolish" };
   hit: {
     id: string;
     kind: TargetKind;

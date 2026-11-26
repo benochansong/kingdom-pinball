@@ -353,7 +353,7 @@ describe("core energy, checkpoints, and classic isolation", () => {
       facilities: { lumber: { level: 100 } },
       claimed: [null, "wood100", "wood100"],
     })!;
-    expect(d.version).toBe(3);
+    expect(d.version).toBe(4);
     expect(d.resources.wood).toBe(500);
     expect(d.resources.stone).toBe(30);
     expect(d.resources.energy).toBe(100);

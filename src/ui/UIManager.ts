@@ -214,12 +214,13 @@ export class UIManager {
       '<p>진행 중인 원정을 기록하고, 스피어 5개로 다시 시작합니다.</p><div class="dialog-actions"><button data-action="close">돌아가기</button><button class="primary" data-action="restart-confirm">다시 시작</button></div>',
     );
   }
-  open(title: string, body: string): void {
+  open(title: string, body: string, resumeOnClose?: boolean): void {
     this.dialog.classList.remove("wide");
     if (!this.dialog.open) {
       this.wasPlaying = this.game.state === "playing";
       this.lastFocus = document.activeElement as HTMLElement;
     }
+    if (resumeOnClose !== undefined) this.wasPlaying = resumeOnClose;
     if (this.game.state === "playing") this.game.pause();
     this.dialog.querySelector(".dialog-inner")!.innerHTML =
       `<div class="dialog-eyebrow">THE ROYAL CHAMBER</div><button class="dialog-close" data-action="close" aria-label="닫기">×</button><h2 id="dialog-title">${title}</h2>${body}`;

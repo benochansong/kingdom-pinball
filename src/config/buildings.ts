@@ -278,6 +278,84 @@ export const BUILDINGS: BuildingConfig[] = [
     { limit: 2 },
   ),
 ];
+// Phase 4 opens the existing barracks at settlement; saved instances keep their IDs and levels.
+BUILDINGS.find((b) => b.id === "barracks")!.rank = 1;
+BUILDINGS.find((b) => b.id === "barracks")!.description =
+  "검병 · 창병 · 방패병 생산";
+BUILDINGS.push(
+  b(
+    "archery",
+    "궁수 훈련장",
+    "military",
+    { wood: 80, stone: 30, gold: 70 },
+    2,
+    36,
+    32,
+    "궁수 생산 · 타격 훈련 가속",
+  ),
+  b(
+    "stable",
+    "마구간",
+    "military",
+    { wood: 100, stone: 60, gold: 100 },
+    3,
+    38,
+    32,
+    "기병 생산 · 돌격 콤보",
+  ),
+  b(
+    "magicSchool",
+    "마법학교",
+    "military",
+    { wood: 80, stone: 100, gold: 130, mana: 10 },
+    4,
+    34,
+    34,
+    "마법사 생산 · 마법 연구",
+  ),
+  b(
+    "temple",
+    "신전",
+    "military",
+    { wood: 60, stone: 100, gold: 100, mana: 8 },
+    4,
+    34,
+    34,
+    "치유사 생산 · 제한적 회복",
+  ),
+  b(
+    "siegeWorkshop",
+    "공성 작업장",
+    "military",
+    { wood: 150, stone: 120, gold: 160 },
+    5,
+    40,
+    38,
+    "투석기 생산",
+  ),
+  b(
+    "academy",
+    "군사학교",
+    "military",
+    { wood: 80, stone: 100, gold: 120 },
+    3,
+    34,
+    32,
+    "전술 연구 · 집결 강화",
+    { limit: 1 },
+  ),
+  b(
+    "granary",
+    "군량 창고",
+    "military",
+    { wood: 70, stone: 50, gold: 60 },
+    2,
+    34,
+    32,
+    "인구 한도 +5 / 레벨",
+    { limit: 2 },
+  ),
+);
 export const buildingConfig = (id: string): BuildingConfig | undefined =>
   BUILDINGS.find((b) => b.id === id);
 export const BUILD_LIMITS = [4, 8, 12, 16, 20];

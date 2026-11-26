@@ -54,9 +54,9 @@ export class EconomyUI {
     ui.root.querySelector(".tagline")!.textContent =
       "Bounce, Harvest, Prosper!";
     ui.root.querySelector(".edition-note")!.innerHTML =
-      "PHASE 03 <span>THE ROYAL ARCHITECT</span>";
+      "PHASE 04 <span>THE ROYAL ARMY</span>";
     ui.root.querySelector(".edition")!.innerHTML =
-      "THE GREENWOOD CHRONICLES <span>·</span> CHAPTER III";
+      "THE GREENWOOD CHRONICLES <span>·</span> CHAPTER IV";
     ui.root
       .querySelector(".menu-links")!
       .insertAdjacentHTML(

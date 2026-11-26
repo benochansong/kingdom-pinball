@@ -101,8 +101,18 @@ export class BuildingManager {
     const error = this.preview(item);
     if (error) return error;
     const cost = this.cost(item.type);
-    const candidate:BuildingEntity={...item,level:1,id:`building-${this.data.nextId}`,paid:cost,production:freshProduction(),charge:0,lastHit:-10000,readyAt:0};
-    const physicsError=probeLayout([...this.buildings,candidate]);if(physicsError)return physicsError;
+    const candidate: BuildingEntity = {
+      ...item,
+      level: 1,
+      id: `building-${this.data.nextId}`,
+      paid: cost,
+      production: freshProduction(),
+      charge: 0,
+      lastHit: -10000,
+      readyAt: 0,
+    };
+    const physicsError = probeLayout([...this.buildings, candidate]);
+    if (physicsError) return physicsError;
     this.snapshot();
     if (!this.economy.resources.transact(cost)) return "자원이 부족합니다.";
     this.buildings.push({
@@ -128,7 +138,12 @@ export class BuildingManager {
       return "위치와 방향이 같습니다.";
     const error = this.preview({ ...item, type: b.type }, id);
     if (error) return error;
-    const physicsError=probeLayout(this.buildings.map(x=>x.id===id?{...x,x:item.x,y:item.y,angle:item.angle}:x));if(physicsError)return physicsError;
+    const physicsError = probeLayout(
+      this.buildings.map((x) =>
+        x.id === id ? { ...x, x: item.x, y: item.y, angle: item.angle } : x,
+      ),
+    );
+    if (physicsError) return physicsError;
     this.snapshot();
     if (
       !this.economy.resources.transact(
@@ -294,7 +309,8 @@ export class BuildingManager {
     if (!this.active) return "건설 모드에서만 가능합니다.";
     const q = this.quote(items);
     if (q.error) return q.error;
-    const physicsError=probeLayout(q.next);if(physicsError)return physicsError;
+    const physicsError = probeLayout(q.next);
+    if (physicsError) return physicsError;
     this.snapshot();
     if (!this.economy.resources.transact(q.cost)) return "자원 부족";
     this.data.stats.built += q.next.length - this.buildings.length;

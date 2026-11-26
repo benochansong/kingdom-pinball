@@ -88,7 +88,7 @@ describe("Kingdom builder", () => {
     );
     const old = { ...freshEconomy(), version: 2, building: undefined };
     expect(sanitizeEconomy(old)?.resources).toEqual(old.resources);
-    expect(sanitizeEconomy(old)?.version).toBe(3);
+    expect(sanitizeEconomy(old)?.version).toBe(4);
   });
   it("uses independent production cooldowns for an added facility", () => {
     const b = manager();

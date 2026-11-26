@@ -8,11 +8,52 @@ export class AudioManager {
   private effects?: GainNode;
   private nextNote = 0;
   private note = 0;
+  private militaryAt = 0;
   private disposers: (() => void)[] = [];
   constructor(private game: GameStateManager) {
     const bus = game.events;
     this.disposers = [
-      bus.on('construction',({kind})=>{this.tone(kind==='invalid'?130:kind==='select'?440:260,.14,'triangle',.12,kind==='build'?660:90);}),
+      bus.on("militarySound", ({ kind }) => {
+        const now = performance.now();
+        if (now - this.militaryAt < 80) return;
+        this.militaryAt = now;
+        const hz: Record<string, number> = {
+          spawn: 523,
+          hit: 155,
+          heal: 880,
+          death: 130,
+          archer: 690,
+          mage: 1050,
+          healer: 950,
+          catapult: 85,
+          charge: 180,
+          tower: 720,
+        };
+        this.tone(
+          hz[kind] ?? 260,
+          0.12,
+          kind === "mage" ? "sine" : "triangle",
+          0.09,
+          kind === "spawn" ? 784 : 90,
+        );
+      }),
+      bus.on("battleResult", ({ outcome }) => {
+        (outcome === "victory"
+          ? [392, 523, 659, 784]
+          : [392, 330, 262]
+        ).forEach((hz, i) =>
+          this.tone(hz, 0.4, "triangle", 0.16, undefined, i * 0.12),
+        );
+      }),
+      bus.on("construction", ({ kind }) => {
+        this.tone(
+          kind === "invalid" ? 130 : kind === "select" ? 440 : 260,
+          0.14,
+          "triangle",
+          0.12,
+          kind === "build" ? 660 : 90,
+        );
+      }),
       bus.on("flipper", () => this.tone(95, 0.065, "triangle", 0.25, 35)),
       bus.on("launch", ({ power }) => {
         this.tone(120 + power * 100, 0.28, "sawtooth", 0.13, 900);
@@ -124,7 +165,18 @@ export class AudioManager {
         true,
       );
     this.note++;
-    this.nextNote = now + 0.52;
+    const combat = this.game.army?.data.battle;
+    if (combat)
+      this.tone(this.note % 2 ? 85 : 65, 0.15, "triangle", 0.1, 35, 0, true);
+    this.nextNote =
+      now +
+      (combat
+        ? combat.enemies.filter((u) => u.hp > 0).length > 10
+          ? 0.28
+          : 0.36
+        : this.game.army?.population
+          ? 0.46
+          : 0.52);
   }
   private tone(
     hz: number,

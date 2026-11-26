@@ -300,7 +300,10 @@ export class BuildUI {
         this.moving = true;
       }
     }
-    if(cmd==='inspect'){this.cancel();this.selected=id;}
+    if (cmd === "inspect") {
+      this.cancel();
+      this.selected = id;
+    }
     if (cmd === "upgrade") {
       const b = m.buildings.find((b) => b.id === this.selected);
       if (b) this.feedback = m.upgrade(b.id, Number(id)) ?? "강화 완료";
@@ -487,7 +490,7 @@ export class BuildUI {
                 `<button data-action="build:select:${c.id}" ${m.economy.data.rank < c.rank ? "disabled" : ""}><b>${c.name}</b><small>${costs(m.cost(c.id))}</small><span>${m.economy.data.rank < c.rank ? `등급 ${c.rank} 필요` : c.description}</span></button>`,
             )
             .join("")}</div>`
-    }${m.buildings.length?`<h3>배치된 건물</h3>${m.buildings.map(b=>`<button data-action="build:inspect:${b.id}">${buildingConfig(b.type)!.name} Lv.${b.level} · (${b.x}, ${b.y})</button>`).join('')}`:''}<button data-action="build:plans">추천 설계 · 프리셋</button><button data-action="build:goals">목표 · 건물 조합</button><button data-action="build:tutorial">건설 안내 다시 보기</button>`;
+    }${m.buildings.length ? `<h3>배치된 건물</h3>${m.buildings.map((b) => `<button data-action="build:inspect:${b.id}">${buildingConfig(b.type)!.name} Lv.${b.level} · (${b.x}, ${b.y})</button>`).join("")}` : ""}<button data-action="build:plans">추천 설계 · 프리셋</button><button data-action="build:goals">목표 · 건물 조합</button><button data-action="build:tutorial">건설 안내 다시 보기</button>`;
     const b = m.buildings.find((b) => b.id === this.selected),
       p = this.preview,
       c = p ? buildingConfig(p.type) : b ? buildingConfig(b.type) : undefined;

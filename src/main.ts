@@ -2,6 +2,8 @@ import Phaser from "phaser";
 import "./style.css";
 import "./economy.css";
 import "./building.css";
+import "./army.css";
+import { ArmyUI } from "./ui/ArmyUI";
 import { BuildUI } from "./ui/BuildUI";
 import { GameStateManager } from "./core/GameStateManager";
 import { AudioManager } from "./audio/AudioManager";
@@ -9,12 +11,17 @@ import { UIManager } from "./ui/UIManager";
 import { PinballScene } from "./scenes/PinballScene";
 import { EconomyUI } from "./ui/EconomyUI";
 import { ECONOMY_KEY } from "./economy/EconomySaveManager";
+import { createLabModel, mountMilitaryLab } from "./dev/MilitaryLab";
 
-const model = new GameStateManager();
+const lab =
+  import.meta.env.DEV &&
+  new URLSearchParams(location.search).get("military-lab") === "1";
+const model = lab ? createLabModel() : new GameStateManager();
 const audio = new AudioManager(model);
 const ui = new UIManager(model, audio);
 const economyUI = new EconomyUI(ui, model);
 const buildUI = new BuildUI(ui, model);
+const armyUI = new ArmyUI(ui, model);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -27,6 +34,7 @@ const game = new Phaser.Game({
   fps: { target: 60 },
   scene: [new PinballScene(model, audio, () => ui.render())],
 });
+const disposeLab = lab ? mountMilitaryLab(model, ui, game) : undefined;
 const abort = new AbortController();
 const keys = new Set<string>();
 const controlCodes = [
@@ -44,6 +52,7 @@ window.addEventListener(
   "keydown",
   (event) => {
     if (buildUI.handleKey(event)) return;
+    if (armyUI.handleKey(event)) return;
     if (!controlCodes.includes(event.code)) return;
     if (
       (event.target as HTMLElement).matches("input, select, textarea") ||
@@ -148,6 +157,8 @@ if (import.meta.hot)
     abort.abort();
     economyUI.dispose();
     buildUI.dispose();
+    armyUI.dispose();
+    disposeLab?.();
     ui.dispose();
     audio.dispose();
     model.dispose();
