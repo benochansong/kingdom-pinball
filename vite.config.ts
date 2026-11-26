@@ -1,10 +1,10 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: './',
+  base: "./",
   build: {
     rollupOptions: {
-      output: { manualChunks: { phaser: ['phaser'], matter: ['matter-js'] } },
+      output: { manualChunks: { phaser: ["phaser"], matter: ["matter-js"] } },
     },
     chunkSizeWarningLimit: 1600,
   },

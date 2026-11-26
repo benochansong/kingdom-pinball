@@ -9,6 +9,12 @@ export class TiltSystem {
     this.tilted = this.heat >= 100;
     return true;
   }
-  update(seconds: number): void { if (!this.tilted) this.heat = Math.max(0, this.heat - seconds * 7); }
-  reset(): void { this.heat = 0; this.tilted = false; this.lastNudge = -Infinity; }
+  update(seconds: number): void {
+    if (!this.tilted) this.heat = Math.max(0, this.heat - seconds * 7);
+  }
+  reset(): void {
+    this.heat = 0;
+    this.tilted = false;
+    this.lastNudge = -Infinity;
+  }
 }
