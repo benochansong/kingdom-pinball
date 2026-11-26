@@ -69,15 +69,17 @@ function segmentDistance(
     );
   return Math.hypot(p.x - a[0] - t * dx, p.y - a[1] - t * dy);
 }
-export function fixedBlocked(p: Point, pad = 15): boolean {
+export function fixedBlocked(
+  p: Point,
+  pad = 15,
+  targets = ECONOMY_TARGETS,
+): boolean {
   return (
     p.x < 60 + pad ||
     p.x > 522 - pad ||
     p.y < 60 + pad ||
     p.y > 748 ||
-    ECONOMY_TARGETS.some(
-      (t) => Math.hypot(p.x - t.x, p.y - t.y) < t.radius + pad,
-    ) ||
+    targets.some((t) => Math.hypot(p.x - t.x, p.y - t.y) < t.radius + pad) ||
     RAILS.some((r) => segmentDistance(p, r.a, r.b) < r.width / 2 + pad)
   );
 }

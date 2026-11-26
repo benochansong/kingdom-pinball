@@ -452,7 +452,7 @@ export class BuildUI {
                 "",
               )}<rect x="0" y="710" width="600" height="190" fill="#ba5d4c28"/><text x="300" y="744" text-anchor="middle" fill="#ebc2a0" font-size="12">플리퍼 · 손실 구역 보호</text>`
           : ""
-      }${m.buildings.map((b) => buildingSVG(b, b.id === this.selected)).join("")}${this.preview && !test ? `<g>${buildingSVG(this.preview, false, true)}<circle cx="${this.preview.x}" cy="${this.preview.y}" r="35" fill="none" stroke="${error ? "#ff8c79" : "#a1edb1"}" stroke-width="2" stroke-dasharray="4 3"/><path d="M${this.preview.x} ${this.preview.y}l${Math.cos((this.preview.angle * Math.PI) / 180) * 55} ${Math.sin((this.preview.angle * Math.PI) / 180) * 55}" stroke="#efcf7e" stroke-width="2"/></g>` : ""}`;
+      }${(this.game.war && !active ? [] : m.buildings.filter((b) => !b.disabled)).map((b) => buildingSVG(b, b.id === this.selected)).join("")}${this.preview && !test ? `<g>${buildingSVG(this.preview, false, true)}<circle cx="${this.preview.x}" cy="${this.preview.y}" r="35" fill="none" stroke="${error ? "#ff8c79" : "#a1edb1"}" stroke-width="2" stroke-dasharray="4 3"/><path d="M${this.preview.x} ${this.preview.y}l${Math.cos((this.preview.angle * Math.PI) / 180) * 55} ${Math.sin((this.preview.angle * Math.PI) / 180) * 55}" stroke="#efcf7e" stroke-width="2"/></g>` : ""}`;
     }
     if (!active) return;
     const key = JSON.stringify([

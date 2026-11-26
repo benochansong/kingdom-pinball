@@ -11,7 +11,9 @@ import { activeSynergies } from "../building/BuildingManager";
 export class ResourceManager {
   constructor(readonly data: EconomyData) {}
   capacity(resource: ResourceId): number {
-    const buildings = this.data.building?.buildings ?? [];
+    const buildings = (this.data.building?.buildings ?? []).filter(
+      (b) => !b.disabled,
+    );
     const extra =
       resource === "energy"
         ? 0
@@ -33,7 +35,7 @@ export class ResourceManager {
     );
   }
   space(resource: ResourceId): number {
-    return this.capacity(resource) - this.data.resources[resource];
+    return Math.max(0, this.capacity(resource) - this.data.resources[resource]);
   }
   canAfford(cost: Cost): boolean {
     return Object.entries(cost).every(

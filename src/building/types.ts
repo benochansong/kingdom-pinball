@@ -18,6 +18,8 @@ export interface BuildingConfig {
   sensor?: boolean;
 }
 export interface BuildingEntity {
+  owner?: "ally" | "enemy";
+  disabled?: boolean;
   id: string;
   type: string;
   x: number;

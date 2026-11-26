@@ -27,6 +27,11 @@ import { PathfindingSystem } from "./PathfindingSystem";
 import { maxHp, attackPower } from "./DamageCalculator";
 import { formationPosition } from "./FormationManager";
 export class ArmyManager {
+  externalCombat = false;
+  side: "ally" | "enemy" = "ally";
+  spawnOverride?: (b: BuildingEntity) => { x: number; y: number } | null;
+  worldBuildings?: () => BuildingEntity[];
+  productionFactor: (b: BuildingEntity) => number = () => 1;
   readonly navigation = new PathfindingSystem();
   readonly combat: CombatManager;
   private accumulator = 0;
@@ -37,7 +42,7 @@ export class ArmyManager {
   constructor(readonly economy: EconomyManager) {
     economy.data.army ??= freshArmy();
     this.combat = new CombatManager(this.data, this.navigation);
-    this.navigation.rebuild(this.buildings);
+    this.navigation.rebuild(this.worldBuildings?.() ?? this.buildings);
   }
   get data(): ArmyData {
     return this.economy.data.army!;
@@ -63,7 +68,7 @@ export class ArmyManager {
       120,
       POPULATION[this.economy.data.rank - 1] +
         this.buildings
-          .filter((b) => b.type === "granary")
+          .filter((b) => b.type === "granary" && !b.disabled)
           .reduce((s, b) => s + b.level * 5, 0),
     );
   }
@@ -102,6 +107,7 @@ export class ArmyManager {
   }
   unlock(kind: UnitKind, building: BuildingEntity): string | null {
     const c = unitConfig(kind);
+    if (building.disabled) return "파괴된 시설을 먼저 재건하세요.";
     if (building.type !== c.building)
       return "해당 시설에서 훈련할 수 없습니다.";
     if (this.economy.data.rank < c.rank) return `왕국 등급 ${c.rank} 필요`;
@@ -210,6 +216,7 @@ export class ArmyManager {
     return u;
   }
   spawnPosition(b: BuildingEntity): { x: number; y: number } | null {
+    if (this.spawnOverride) return this.spawnOverride(b);
     const c = buildingConfig(b.type)!;
     for (let r = Math.max(c.width, c.height) / 2 + 20; r <= 80; r += 15)
       for (let i = 0; i < 12; i++) {
@@ -230,7 +237,7 @@ export class ArmyManager {
     if (!e || e.progress < 1) return;
     const p = this.spawnPosition(b);
     if (!p) return;
-    const u = this.createUnit(e.kind, "ally", p);
+    const u = this.createUnit(e.kind, this.side, p);
     this.data.units.push(u);
     q.entries.shift();
     this.data.stats.produced[e.kind] =
@@ -278,7 +285,7 @@ export class ArmyManager {
       level > 3 ||
       this.data.researchTask ||
       this.economy.data.rank < c.rank ||
-      !this.buildings.some((b) => b.type === c.building) ||
+      !this.buildings.some((b) => b.type === c.building && !b.disabled) ||
       !this.economy.resources.transact(researchCost(level))
     )
       return false;
@@ -300,6 +307,7 @@ export class ArmyManager {
         this.data.stats.hits++;
         this.data.tutorial = Math.max(3, this.data.tutorial);
       }
+      if (b.disabled) return;
       const e = q.entries[0];
       if (e) {
         e.progress = Math.min(
@@ -397,7 +405,7 @@ export class ArmyManager {
     if (this.accumulator < 0.05) return;
     const step = this.accumulator;
     this.accumulator = 0;
-    this.navigation.rebuild(this.buildings);
+    this.navigation.rebuild(this.worldBuildings?.() ?? this.buildings);
     const a = this.data;
     for (const [id, q] of Object.entries(a.queues)) {
       const b = this.buildings.find((b) => b.id === id);
@@ -412,7 +420,8 @@ export class ArmyManager {
           3,
           TRAINING_SPEED[b.level - 1] *
             (a.buffs.recruitment > now ? 1.3 : 1) *
-            (a.buffs.offensive > now ? 1.2 : 1),
+            (a.buffs.offensive > now ? 1.2 : 1) *
+            this.productionFactor(b),
         );
         e.progress = Math.min(
           1,
@@ -426,7 +435,9 @@ export class ArmyManager {
     const task = a.researchTask;
     if (task) {
       const c = RESEARCH.find((r) => r.id === task.id)!;
-      const facility = this.buildings.find((b) => b.type === c.building);
+      const facility = this.buildings.find(
+        (b) => b.type === c.building && !b.disabled,
+      );
       if (facility) {
         task.progress = Math.min(
           1,
@@ -471,8 +482,8 @@ export class ArmyManager {
       )
     )
       a.morale = Math.min(75, a.morale + step * 0.5);
-    this.combat.update(step, now);
-    if (a.battle) {
+    if (!this.externalCombat) this.combat.update(step, now);
+    if (a.battle && !this.externalCombat) {
       a.battle.time += step;
       for (const b of this.buildings) {
         if (b.type === "archerTower") {

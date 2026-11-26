@@ -21,7 +21,7 @@ export function counter(attacker: UnitKind, defender: UnitKind): number {
 export function attackPower(u: UnitEntity, a: ArmyData, now: number): number {
   const c = unitConfig(u.kind);
   let p = c.attack * (1 + (u.rank - 1) * 0.05);
-  if (u.side === "ally") {
+  if (u.side === "ally" || a.ownedSide === u.side) {
     p *=
       1 + (a.research.weapons ?? 0) * 0.08 + (a.research.tactics ?? 0) * 0.03;
     if (c.id === "mage") p *= 1 + (a.research.magic ?? 0) * 0.1;
@@ -54,10 +54,12 @@ export function damageAmount(
   let damage = raw * counter(attacker.kind, defender.kind),
     armor =
       unitConfig(defender.kind).armor +
-      (defender.side === "ally" ? (a.research.armor ?? 0) * 3 : 0);
+      (defender.side === "ally" || a.ownedSide === defender.side
+        ? (a.research.armor ?? 0) * 3
+        : 0);
   damage *= 100 / (100 + armor * 3);
   if (defender.kind === "guard" && normalRanged) damage *= 0.65;
-  if (defender.side === "ally") {
+  if (defender.side === "ally" || a.ownedSide === defender.side) {
     if (a.buffs.shield > now) damage *= 0.8;
     if (a.formation === "shield") damage *= 0.9;
     if (a.formation === "spear" && attacker.kind === "knight") damage *= 0.85;

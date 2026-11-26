@@ -21,6 +21,7 @@ export type UnitState =
   | "stunned"
   | "dead";
 export interface UnitEntity {
+  kingdomId?: string;
   id: string;
   kind: UnitKind;
   side: "ally" | "enemy";
@@ -118,6 +119,7 @@ export interface BattleState {
   >;
 }
 export interface ArmyData {
+  ownedSide?: "ally" | "enemy";
   version: 1;
   nextId: number;
   units: UnitEntity[];

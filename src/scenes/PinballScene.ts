@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { WarRenderer } from "../war/WarRenderer";
+import { WAR_TARGETS } from "../config/war";
 import type { GameStateManager } from "../core/GameStateManager";
 import { createTableArt } from "./TableArt";
 import { EffectsManager } from "../effects/EffectsManager";
@@ -16,6 +18,7 @@ export class PinballScene extends Phaser.Scene {
   private background!: Phaser.GameObjects.Image;
   private artKey = "";
   private armyRenderer?: ArmyRenderer;
+  private warRenderer?: WarRenderer;
   constructor(
     private model: GameStateManager,
     private audio: AudioManager,
@@ -58,6 +61,7 @@ export class PinballScene extends Phaser.Scene {
     this.effects = new EffectsManager(this, this.model);
     this.moving = this.add.graphics().setDepth(15);
     this.armyRenderer = new ArmyRenderer(this, this.model);
+    this.warRenderer = new WarRenderer(this, this.model);
     this.shadow = this.add.ellipse(0, 0, 23, 13, 0x051c20, 0.65).setDepth(18);
     this.sphere = this.add
       .image(554, 802, "sphere")
@@ -73,11 +77,24 @@ export class PinballScene extends Phaser.Scene {
     if (this.model.state !== "paused") this.visualTime += dt;
     this.effects.update(dt);
     this.armyRenderer?.draw();
+    this.warRenderer?.draw();
     const economy =
       this.model.mode === "kingdom" ? this.model.economy : undefined;
-    const artKey = `${this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;
-    if (artKey !== this.artKey) {
-      this.artKey = artKey;
+    const artKey = `${this.model.war ? "war" : this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;
+    if (
+      artKey +
+        (this.model.war?.data.structures
+          .filter((s) => s.hp <= 0)
+          .map((s) => s.id)
+          .join() ?? "") !==
+      this.artKey
+    ) {
+      this.artKey =
+        artKey +
+        (this.model.war?.data.structures
+          .filter((s) => s.hp <= 0)
+          .map((s) => s.id)
+          .join() ?? "");
       const levels = economy
         ? Object.fromEntries(
             FACILITIES.map((f) => [
@@ -87,9 +104,18 @@ export class PinballScene extends Phaser.Scene {
           )
         : {};
       const canvas = createTableArt(
-        economy ? ECONOMY_TARGETS : TARGETS,
+        economy
+          ? this.model.war
+            ? WAR_TARGETS.filter((t) =>
+                this.model.war!.data.structures.some(
+                  (s) => s.side === "ally" && s.fixed === t.id && s.hp > 0,
+                ),
+              )
+            : ECONOMY_TARGETS
+          : TARGETS,
         levels,
         economy?.data.rank,
+        !!this.model.war,
       );
       const texture = this.textures.get(
         "table",

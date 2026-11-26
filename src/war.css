@@ -1,0 +1,174 @@
+.war-only {
+  display: none;
+}
+.war-mode .war-only {
+  display: block;
+}
+.war-mode #war-hud {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #182b28;
+  border: 1px solid #af956153;
+  margin: 8px 0;
+  border-radius: 8px;
+}
+.castle-meter {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+}
+.castle-meter b {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+.castle-meter progress {
+  width: 100%;
+  height: 7px;
+  accent-color: #83c9b7;
+}
+.castle-meter.enemy {
+  text-align: right;
+}
+.castle-meter.enemy progress {
+  accent-color: #e28c7a;
+}
+.war-phase {
+  display: grid;
+  text-align: center;
+  align-content: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #e6cc8a;
+}
+.war-mode .war-commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.war-commands button {
+  font-size: 11px;
+  padding: 7px 10px;
+  flex: 1 0 auto;
+}
+.war-card {
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid #ab986447;
+  border-radius: 6px;
+  background: #172c27;
+}
+.war-card button {
+  margin: 3px;
+}
+.war-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+}
+.war-form label {
+  display: grid;
+  gap: 6px;
+}
+.war-form select,
+.war-form input,
+#war-name {
+  width: 100%;
+  padding: 9px;
+  background: #182b28;
+  color: #eee3bf;
+  border: 1px solid #b29a6655;
+  border-radius: 4px;
+}
+.war-mode #war-left,
+.war-mode #war-right {
+  border-bottom: 1px solid #aa98694d;
+  padding-bottom: 15px;
+  margin-bottom: 18px;
+}
+.war-energy {
+  padding: 10px;
+  border: 1px solid #dfb879;
+  background: #26392f;
+}
+.war-energy button {
+  margin: 3px;
+}
+.war-mode .war-mobile-energy {
+  display: flex;
+  grid-column: 1/-1;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.war-mobile-energy button {
+  padding: 7px 10px;
+}
+.war-mode .table-section {
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .war-mode #war-hud {
+    padding: 8px;
+    gap: 8px;
+  }
+  .castle-meter {
+    font-size: 9px;
+  }
+  .castle-meter b {
+    font-size: 12px;
+  }
+  .war-phase {
+    font-size: 9px;
+  }
+  .war-commands button {
+    font-size: 10px;
+    padding: 7px;
+  }
+  .war-form {
+    grid-template-columns: 1fr;
+  }
+  .war-mode .war-commands {
+    position: relative;
+    z-index: 5;
+  }
+}
+
+.war-mode #tutorial,
+.war-mode #army-battle-summary,
+.war-mode [data-action="army:training"],
+.war-mode .army-commands [data-action^="army:command:"] {
+  display: none !important;
+}
+.war-mode[data-mode="kingdom"] .table-section {
+  max-width: 440px;
+}
+.war-mode[data-mode="kingdom"] .table-frame {
+  max-height: none;
+  min-height: 0;
+  width: 100%;
+}
+.war-mode .war-commands button.selected {
+  background: #596146;
+}
+.war-mode #war-hud {
+  max-width: 1170px;
+  margin: 8px auto;
+  width: calc(100% - 32px);
+}
+@media (max-width: 720px) {
+  .war-mode[data-mode="kingdom"] .table-section {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .war-mode #war-hud {
+    width: 100%;
+    margin: 4px 0;
+  }
+  .war-mode .war-commands {
+    margin-bottom: 8px;
+  }
+}

@@ -98,7 +98,7 @@ export class EconomyUI {
     ui.onRelaunchClose = () => this.relaunchPanel();
     this.disposers = [
       game.events.on("state", ({ state }) => {
-        if (game.mode === "kingdom") {
+        if (game.mode === "kingdom" && !game.war) {
           if (state === "relaunch") this.relaunchPanel();
           if (state === "over") this.result();
         }

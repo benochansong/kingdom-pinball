@@ -19,6 +19,10 @@ import {
 import { TestBallSimulator } from "../building/TestBallSimulator";
 import { ArmyManager } from "../army/ArmyManager";
 import type { BattleRecord } from "../army/types";
+import { WarManager, freshWar } from "../war/WarManager";
+import { WarSaveManager } from "../war/WarSaveManager";
+import type { WarOptions } from "../war/types";
+import { WAR_TARGETS } from "../config/war";
 
 export class GameStateManager {
   readonly events = new EventBus();
@@ -32,6 +36,7 @@ export class GameStateManager {
   builder?: BuildingManager;
   testBall?: TestBallSimulator;
   army?: ArmyManager;
+  war?: WarManager;
   lastBattleResult?: BattleRecord;
   private practice?: {
     economy: EconomyManager;
@@ -64,6 +69,7 @@ export class GameStateManager {
   constructor(
     readonly save = new SaveManager(),
     readonly economySave = new EconomySaveManager(),
+    readonly warSave = new WarSaveManager(),
   ) {
     this.bindPhysics();
     this.physics.spawn();
@@ -75,6 +81,65 @@ export class GameStateManager {
       if (speed > 160) this.events.emit("impact", { x, y, speed });
     };
   }
+  startWar(options?: Partial<WarOptions>): boolean {
+    const data = options ? freshWar(options) : this.warSave.load();
+    if (!data) return false;
+    this.menu();
+    this.mode = "kingdom";
+    this.recorded = true;
+    this.war = new WarManager(data, this.warSave);
+    this.economy = this.war.player;
+    this.army = this.war.army;
+    this.builder = this.war.builder;
+    this.physics.dispose();
+    this.physics = new PinballPhysics(WAR_TARGETS);
+    this.bindPhysics();
+    this.score = new ScoreManager();
+    this.score.score = data.player.score;
+    this.score.hits = data.player.totalHits;
+    this.score.combo.max = data.player.scoreComboMax;
+    this.time = data.time;
+    this.tilt.reset();
+    this.recovery.reset();
+    this.saveConflict = false;
+    this.war.canMaterialize = (x, y, type) => {
+      const b = this.physics.ball,
+        c = buildingConfig(type)!;
+      return (
+        !b ||
+        Math.hypot(b.position.x - x, b.position.y - y) >
+          Math.hypot(c.width, c.height) / 2 + 16
+      );
+    };
+    this.war.onNotice = (text) =>
+      this.events.emit("message", { text, tone: "warning" });
+    this.war.onSound = (kind) => this.events.emit("militarySound", { kind });
+    this.war.onLayout = () => this.applyWarLayout();
+    this.war.onEnd = () => {
+      this.syncEconomy();
+      this.setState("over");
+    };
+    this.applyWarLayout();
+    this.economy.resumeCheckpoint();
+    if (data.result) this.setState("over");
+    else if (data.player.launchState === "awaiting") {
+      data.relaunchGrace = this.time + 3000;
+      this.setState("relaunch");
+    } else {
+      this.physics.spawn();
+      this.setState("playing");
+    }
+    this.checkpoint();
+    return true;
+  }
+  private applyWarLayout() {
+    if (!this.war) return;
+    applyBuildings(this.physics, this.war.physicsBuildings);
+    for (const s of this.war.data.structures.filter(
+      (s) => s.side === "ally" && s.fixed,
+    ))
+      this.physics.setTargetEnabled(s.fixed!, s.hp > 0);
+  }
   start(tutorial = !this.save.data.tutorialDone): void {
     this.restorePractice();
     this.army = undefined;
@@ -82,6 +147,7 @@ export class GameStateManager {
     this.testBall = undefined;
     this.builder = undefined;
     this.finishRecord();
+    this.war = undefined;
     this.mode = "classic";
     this.economy = undefined;
     this.saveConflict = false;
@@ -108,6 +174,7 @@ export class GameStateManager {
     this.restorePractice();
     this.stopTestBall();
     this.finishRecord();
+    this.war = undefined;
     if (fresh) {
       const old = this.economySave.load();
       if (old) this.economySave.archive(old);
@@ -169,6 +236,10 @@ export class GameStateManager {
     return true;
   }
   endKingdom(): void {
+    if (this.war) {
+      this.war.finish("defeat", "플레이어 항복");
+      return;
+    }
     if (this.army?.data.battle) this.army.finish("defeat");
     this.syncEconomy();
     this.economy?.end();
@@ -186,6 +257,10 @@ export class GameStateManager {
   checkpoint(): void {
     if (this.saveConflict) return;
     this.syncEconomy();
+    if (this.war) {
+      this.war.checkpoint();
+      return;
+    }
     this.economy?.checkpoint();
   }
   private bindArmy() {
@@ -202,6 +277,7 @@ export class GameStateManager {
     };
   }
   startTraining(scenario: number, practice: boolean): string | null {
+    if (this.war) return "군사 훈련은 독립된 왕국 발전 모드에서 이용하세요.";
     if (
       !this.economy ||
       !this.army ||
@@ -280,13 +356,24 @@ export class GameStateManager {
     this.events.emit("state", { state });
   }
   pause(): void {
-    if (this.state === "playing") this.setState("paused");
+    if (this.state === "playing" || (this.war && this.state === "relaunch"))
+      this.setState("paused");
   }
   resume(): void {
     if (this.state === "paused" && !this.saveConflict && !this.builder?.active)
-      this.setState("playing");
+      this.setState(
+        this.war && this.economy?.data.launchState === "awaiting"
+          ? "relaunch"
+          : "playing",
+      );
   }
   enterBuild(): boolean {
+    if (this.war && !this.war.preparing) {
+      this.events.emit("message", {
+        text: "전투 중에는 전쟁 패널의 빠른 건설을 사용하세요.",
+      });
+      return false;
+    }
     if (this.practicing) return false;
     if (
       this.mode !== "kingdom" ||
@@ -324,6 +411,27 @@ export class GameStateManager {
     this.testBall = undefined;
   }
   private buildingHit(id: string, speed: number) {
+    if (this.war) {
+      const valid =
+        this.state === "playing" &&
+        this.physics.launched &&
+        !this.tilt.tilted &&
+        this.time >= this.recovery.suppressUntil;
+      const s = this.war.structure(id);
+      if (s?.side === "enemy") {
+        const before = s.hp;
+        this.war.sphereBuilding(id, speed, valid);
+        if (s.hp < before) {
+          this.score.hits++;
+          this.score.combo.hit(this.time);
+          this.score.score += Math.round(100 * this.score.combo.multiplier);
+          this.syncEconomy();
+        }
+        return;
+      }
+      if (s?.hp === 0) return;
+      if (valid) this.war.friendlyHit(id);
+    }
     const b = this.builder?.buildings.find((b) => b.id === id);
     if (!b || this.state !== "playing") return;
     const valid =
@@ -404,6 +512,7 @@ export class GameStateManager {
     this.stopTestBall();
     if (this.builder) this.builder.active = false;
     this.finishRecord();
+    this.war = undefined;
     this.physics.dispose();
     this.physics = new PinballPhysics();
     this.bindPhysics();
@@ -506,6 +615,13 @@ export class GameStateManager {
       this.testBall.update(frameMs);
       return;
     }
+    if (this.war && this.state === "relaunch") {
+      const ms = Math.max(0, Math.min(frameMs, PHYSICS.maxFrameMs));
+      this.time += ms;
+      if (this.time >= this.war.data.relaunchGrace)
+        this.war.tick(ms / 1000, this.time);
+      return;
+    }
     if (this.state !== "playing") return;
     this.accumulator += Math.max(0, Math.min(frameMs, PHYSICS.maxFrameMs));
     while (this.accumulator >= PHYSICS.stepMs && this.state === "playing") {
@@ -549,7 +665,8 @@ export class GameStateManager {
             !this.tilt.tilted &&
             this.time >= this.recovery.suppressUntil,
         );
-      this.army?.tick(dt, this.time);
+      if (this.war) this.war.tick(dt, this.time);
+      else this.army?.tick(dt, this.time);
       if (this.state !== "playing") break;
       if (this.physics.ball && this.physics.ball.position.y > PHYSICS.drainY)
         this.drain();
@@ -580,6 +697,7 @@ export class GameStateManager {
         this.state === "playing",
     );
     if (!result) return;
+    this.war?.friendlyHit(target.id);
     this.army?.hit(target.id, this.time, normalSpeed, true);
     this.syncEconomy();
     const production = this.economy?.harvest(target.id, normalSpeed, true);
@@ -633,6 +751,12 @@ export class GameStateManager {
       this.events.emit("drain", {
         remaining: Math.floor(this.economy.data.resources.energy / 20),
       });
+      if (this.war) {
+        this.war.data.relaunchGrace = this.time + 3000;
+        this.setState("relaunch");
+        this.checkpoint();
+        return;
+      }
       if (this.economy.canContinue()) this.setState("relaunch");
       else this.endKingdom();
       return;
@@ -644,6 +768,7 @@ export class GameStateManager {
     this.events.emit("drain", { remaining: this.remaining });
     if (this.remaining <= 0) {
       this.finishRecord();
+      this.war = undefined;
       this.setState("over");
     } else {
       this.respawnAt = this.time + 1100;

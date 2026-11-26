@@ -399,6 +399,7 @@ export function createTableArt(
   targets = TARGETS,
   levels: Record<string, number> = {},
   rank = 1,
+  war = false,
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
@@ -555,7 +556,7 @@ export function createTableArt(
     c.stroke();
     c.restore();
   }
-  drawCastle(c, 282, 193);
+  if (!war) drawCastle(c, 282, 193);
   targets.forEach((t) => drawTarget(c, t));
   for (const t of targets) {
     const level = levels[t.id] ?? 1;
@@ -657,7 +658,11 @@ export function createTableArt(
   c.fillStyle = "#d9d0a0";
   c.font = "11px Georgia";
   c.letterSpacing = "2px";
-  c.fillText("G R E E N W O O D", 285, targets.length > 6 ? 670 : 592);
+  c.fillText(
+    war ? "K I N G D O M   W A R" : "G R E E N W O O D",
+    285,
+    targets.length > 6 ? 670 : 592,
+  );
   c.font = "9px Georgia";
   c.fillStyle = "#b1c2a080";
   c.fillText("K I N G D O M", 285, targets.length > 6 ? 686 : 609);

@@ -1,6 +1,8 @@
 # KINGDOM PINBALL
 
-**Bounce, Build, Command!** — GREENWOOD KINGDOM에서 플레이하는 중세 판타지 핀볼. PHASE 1 코어 엔진, PHASE 2 경제, PHASE 3 왕국 건설, PHASE 4 군대·훈련 전투를 구현했습니다.
+**Bounce, Build, Conquer!** — GREENWOOD KINGDOM에서 플레이하는 중세 판타지 핀볼. PHASE 1 코어 엔진, PHASE 2 경제, PHASE 3 왕국 건설, PHASE 4 군대·훈련, PHASE 5 독립 왕국 전쟁을 구현했습니다.
+
+전쟁은 메인 메뉴의 **KINGDOM WAR**에서 시작합니다. 5개 적 왕국, 3개 전쟁 유형, 실제 경제와 생산에 기반한 침공, 성벽·왕궁 파괴, 수리·재건 및 별도 저장을 지원합니다. V 지휘소, 1~7 명령, U 군대, F 진형, B 준비 건설. [구현·검증·성능 한계](docs/PHASE5.md)를 참고하세요.
 
 ## 실행
 

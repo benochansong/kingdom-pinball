@@ -22,6 +22,21 @@ export interface CombatEffect {
   side: "ally" | "enemy";
 }
 export class CombatManager {
+  opponentData?: ArmyData;
+  enabled: () => boolean = () => true;
+  controlUnit?: (
+    u: UnitEntity,
+    dt: number,
+    now: number,
+    all: UnitEntity[],
+  ) => boolean;
+  onDamage?: (target: UnitEntity, amount: number, sphere: boolean) => void;
+  onProjectileImpact?: (projectile: Projectile) => boolean;
+  private armyFor(u: UnitEntity) {
+    return u.side === "enemy" && this.opponentData
+      ? this.opponentData
+      : this.data;
+  }
   effects: CombatEffect[] = [];
   private projectilePool: Projectile[] = [];
   private frame = 0;
@@ -62,9 +77,10 @@ export class CombatManager {
     source?: UnitEntity,
     sphere = false,
   ) {
-    if (target.hp <= 0) return;
+    if (target.hp <= 0 || !this.enabled()) return;
     const actual = Math.min(target.hp, amount);
     target.hp -= actual;
+    this.onDamage?.(target, actual, sphere);
     this.dirty = true;
     this.effect({
       x: target.x,
@@ -84,8 +100,17 @@ export class CombatManager {
       }
       if (target.side === "enemy") {
         this.data.morale = Math.min(100, this.data.morale + 2);
+        if (this.opponentData) {
+          this.opponentData.morale = Math.max(0, this.opponentData.morale - 5);
+          this.opponentData.stats.losses++;
+        }
         if (sphere) this.data.stats.sphereKills++;
       } else {
+        if (this.opponentData)
+          this.opponentData.morale = Math.min(
+            100,
+            this.opponentData.morale + 2,
+          );
         this.data.morale = Math.max(0, this.data.morale - 5);
         this.data.stats.losses++;
       }
@@ -158,12 +183,7 @@ export class CombatManager {
     u.target = target?.id;
     u.pathAt = Math.min(u.pathAt, now);
   }
-  private move(
-    u: UnitEntity,
-    goal: { x: number; y: number },
-    dt: number,
-    now: number,
-  ) {
+  move(u: UnitEntity, goal: { x: number; y: number }, dt: number, now: number) {
     if (Math.hypot(goal.x - u.x, goal.y - u.y) < 6) {
       u.state = "idle";
       return;
@@ -232,11 +252,14 @@ export class CombatManager {
     const c = unitConfig(source.kind);
     source.cooldown = now + c.interval * 1000;
     source.state = c.heal ? "healing" : "attacking";
-    let raw = attackPower(source, this.data, now);
+    let raw = attackPower(source, this.armyFor(source), now);
     if (source.kind === "knight" && source.charge) {
       raw +=
         c.charge *
-        (source.side === "ally" && this.data.buffs.cavalry > now ? 1.5 : 1);
+        ((source.side === "ally" || !!this.opponentData) &&
+        this.armyFor(source).buffs.cavalry > now
+          ? 1.5
+          : 1);
       source.charge = false;
       this.effect({
         x: source.x,
@@ -249,7 +272,7 @@ export class CombatManager {
     if (
       source.kind === "mage" &&
       source.nextBoost > 0 &&
-      this.data.buffs.arcane > now
+      this.armyFor(source).buffs.arcane > now
     ) {
       raw *= 1.3;
       source.nextBoost = 0;
@@ -283,14 +306,15 @@ export class CombatManager {
         damage: c.heal
           ? c.heal *
             (1 +
-              (source.side === "ally"
-                ? (this.data.research.healing ?? 0) * 0.15
+              (source.side === "ally" || !!this.opponentData
+                ? (this.armyFor(source).research.healing ?? 0) * 0.15
                 : 0))
           : raw,
         splash:
           c.splash *
-          (source.side === "ally" && source.kind === "mage"
-            ? 1 + (this.data.research.magic ?? 0) * 0.1
+          ((source.side === "ally" || !!this.opponentData) &&
+          source.kind === "mage"
+            ? 1 + (this.armyFor(source).research.magic ?? 0) * 0.1
             : 1),
         heal: !!c.heal,
       });
@@ -299,11 +323,12 @@ export class CombatManager {
     } else
       this.hurt(
         target,
-        damageAmount(source, target, this.data, now, raw),
+        damageAmount(source, target, this.armyFor(target), now, raw),
         source,
       );
   }
   update(dt: number, now: number) {
+    if (!this.enabled()) return;
     this.frame++;
     this.effects = this.effects.filter((e) => (e.ttl -= dt) > 0);
     const all = this.units.filter((u) => u.hp > 0),
@@ -329,6 +354,7 @@ export class CombatManager {
         u.state = "stunned";
         continue;
       }
+      if (this.controlUnit?.(u, dt, now, all)) continue;
       if (u.side === "ally" && !battle && this.data.command === "hold") {
         u.state = "idle";
         continue;
@@ -392,6 +418,7 @@ export class CombatManager {
         p.x = p.startX + (p.tx - p.startX) * t;
         p.y = p.startY + (p.ty - p.startY) * t;
         if (t < 1) continue;
+        if (this.onProjectileImpact?.(p)) continue;
         const source = map.get(p.from),
           target = map.get(p.target);
         if (p.heal) {
@@ -418,7 +445,7 @@ export class CombatManager {
                 damageAmount(
                   source,
                   v,
-                  this.data,
+                  this.armyFor(v),
                   now,
                   p.damage,
                   p.kind === "archer",
@@ -449,7 +476,7 @@ export class CombatManager {
     now: number,
     valid: boolean,
   ) {
-    if (!valid || !this.data.battle || speed < 40) return;
+    if (!valid || !this.enabled() || !this.data.battle || speed < 40) return;
     const dx = to.x - from.x,
       dy = to.y - from.y,
       l2 = dx * dx + dy * dy;

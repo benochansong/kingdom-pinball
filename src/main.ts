@@ -1,8 +1,12 @@
 import Phaser from "phaser";
+import { createWarLab, mountWarLab } from "./dev/WarLab";
 import "./style.css";
 import "./economy.css";
 import "./building.css";
 import "./army.css";
+import "./war.css";
+import { WarUI } from "./ui/WarUI";
+import { WAR_KEY } from "./war/WarSaveManager";
 import { ArmyUI } from "./ui/ArmyUI";
 import { BuildUI } from "./ui/BuildUI";
 import { GameStateManager } from "./core/GameStateManager";
@@ -16,12 +20,20 @@ import { createLabModel, mountMilitaryLab } from "./dev/MilitaryLab";
 const lab =
   import.meta.env.DEV &&
   new URLSearchParams(location.search).get("military-lab") === "1";
-const model = lab ? createLabModel() : new GameStateManager();
+const warLab =
+  import.meta.env.DEV &&
+  new URLSearchParams(location.search).get("war-lab") === "1";
+const model = warLab
+  ? createWarLab()
+  : lab
+    ? createLabModel()
+    : new GameStateManager();
 const audio = new AudioManager(model);
 const ui = new UIManager(model, audio);
 const economyUI = new EconomyUI(ui, model);
 const buildUI = new BuildUI(ui, model);
 const armyUI = new ArmyUI(ui, model);
+const warUI = new WarUI(ui, model);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -34,7 +46,11 @@ const game = new Phaser.Game({
   fps: { target: 60 },
   scene: [new PinballScene(model, audio, () => ui.render())],
 });
-const disposeLab = lab ? mountMilitaryLab(model, ui, game) : undefined;
+const disposeLab = warLab
+  ? mountWarLab(model, ui, game)
+  : lab
+    ? mountMilitaryLab(model, ui, game)
+    : undefined;
 const abort = new AbortController();
 const keys = new Set<string>();
 const controlCodes = [
@@ -51,6 +67,7 @@ const controlCodes = [
 window.addEventListener(
   "keydown",
   (event) => {
+    if (warUI.handleKey(event)) return;
     if (buildUI.handleKey(event)) return;
     if (armyUI.handleKey(event)) return;
     if (!controlCodes.includes(event.code)) return;
@@ -144,7 +161,10 @@ window.addEventListener("pagehide", () => model.checkpoint(), {
 window.addEventListener(
   "storage",
   (event) => {
-    if (event.key === ECONOMY_KEY && model.mode === "kingdom") {
+    if (
+      model.mode === "kingdom" &&
+      event.key === (model.war ? WAR_KEY : ECONOMY_KEY)
+    ) {
       model.invalidateEconomy();
       if (model.state !== "menu") economyUI.showSaveConflict();
     }
@@ -158,6 +178,7 @@ if (import.meta.hot)
     economyUI.dispose();
     buildUI.dispose();
     armyUI.dispose();
+    warUI.dispose();
     disposeLab?.();
     ui.dispose();
     audio.dispose();

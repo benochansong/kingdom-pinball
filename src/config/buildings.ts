@@ -357,7 +357,21 @@ BUILDINGS.push(
   ),
 );
 export const buildingConfig = (id: string): BuildingConfig | undefined =>
-  BUILDINGS.find((b) => b.id === id);
+  id === "warCastle"
+    ? {
+        id: "warCastle",
+        name: "왕궁",
+        category: "military",
+        cost: { wood: 120, stone: 150, gold: 100 },
+        rank: 1,
+        width: 48,
+        height: 48,
+        shape: "circle",
+        restitution: 0.85,
+        limit: 1,
+        description: "전쟁 왕궁",
+      }
+    : BUILDINGS.find((b) => b.id === id);
 export const BUILD_LIMITS = [4, 8, 12, 16, 20];
 export const TERRITORIES = [
   {

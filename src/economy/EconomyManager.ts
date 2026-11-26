@@ -24,6 +24,7 @@ export interface ProductionResult {
   strength: number;
 }
 export class EconomyManager {
+  facilityFactor: (target: string) => number = () => 1;
   readonly resources: ResourceManager;
   readonly market: MarketSystem;
   readonly objectives: ObjectiveManager;
@@ -76,6 +77,8 @@ export class EconomyManager {
       : FACILITIES.find((f) => f.target === target);
     if (
       !valid ||
+      built?.disabled ||
+      this.facilityFactor(target) <= 0 ||
       !config ||
       d.launchState !== "inflight" ||
       !Number.isFinite(normalSpeed) ||
@@ -131,7 +134,12 @@ export class EconomyManager {
     );
     const result = this.resources.grant(
       config.resource,
-      Math.max(1, Math.floor(config.base * multiplier)),
+      Math.max(
+        1,
+        Math.floor(
+          config.base * multiplier * Math.min(2, this.facilityFactor(target)),
+        ),
+      ),
       "production",
     );
     f.yielded += result.accepted;

@@ -8,6 +8,7 @@ export function applyBuildings(
   physics: PinballPhysics,
   buildings: BuildingEntity[],
 ): void {
+  buildings = buildings.filter((b) => !b.disabled);
   for (const [id, body] of physics.buildingBodies) {
     if (!buildings.some((b) => b.id === id)) {
       Matter.Composite.remove(physics.engine.world, body);

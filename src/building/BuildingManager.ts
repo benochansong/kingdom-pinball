@@ -25,6 +25,7 @@ export const scaleCost = (c: Cost, s: number): Cost =>
 export const addCost = (a: Cost, b: Cost): Cost =>
   Object.fromEntries(RESOURCE_IDS.map((r) => [r, (a[r] ?? 0) + (b[r] ?? 0)]));
 export class BuildingManager {
+  placementRule?: (item: BlueprintItem, ignore?: string) => string | null;
   active = false;
   private undoState?: EconomyData;
   ball?: Point;
@@ -66,6 +67,8 @@ export class BuildingManager {
     return scaleCost(buildingConfig(b.type)!.cost, 0.6 * b.level);
   }
   preview(item: BlueprintItem, ignore?: string): string | null {
+    const custom = this.placementRule?.(item, ignore);
+    if (custom) return custom;
     const c = buildingConfig(item.type);
     if (!c) return "존재하지 않는 건물입니다.";
     if (this.economy.data.rank < c.rank)

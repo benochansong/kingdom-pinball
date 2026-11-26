@@ -29,6 +29,28 @@ export class PinballPhysics {
   private targets = new Map<number, TargetDefinition>();
   private incoming = { x: 0, y: 0 };
   private nextTargets: TargetDefinition[];
+  setTargetEnabled(id: string, enabled: boolean) {
+    const target = this.nextTargets.find((t) => t.id === id);
+    if (!target) return;
+    const old = Composite.allBodies(this.engine.world).find(
+      (b) => b.label === id,
+    );
+    if (!enabled && old) {
+      Composite.remove(this.engine.world, old);
+      this.targets.delete(old.id);
+    }
+    if (enabled && !old) {
+      const body = Bodies.circle(target.x, target.y, target.radius, {
+        isStatic: true,
+        restitution: 0.9,
+        friction: 0,
+        label: id,
+        collisionFilter: { category: COLLISION.bumper },
+      });
+      this.targets.set(body.id, target);
+      Composite.add(this.engine.world, body);
+    }
+  }
 
   constructor(targets = TARGETS) {
     this.nextTargets = targets;

@@ -6,12 +6,14 @@ import {
 import type { BuildingEntity } from "../building/types";
 /** Cached 10px navigation grid shared by all units; no Matter bodies per soldier. */
 export class PathfindingSystem {
+  terrain: (p: Point) => boolean = (p) => fixedBlocked(p, 8);
   readonly width = 60;
   readonly height = 75;
   private blocked = new Uint8Array(4500);
   private cache = new Map<number, Int32Array>();
   private signature = "";
   rebuild(buildings: BuildingEntity[]) {
+    buildings = buildings.filter((b) => !b.disabled);
     const s = JSON.stringify(buildings.map((b) => [b.type, b.x, b.y, b.angle]));
     if (s === this.signature) return;
     this.signature = s;
@@ -22,7 +24,7 @@ export class PathfindingSystem {
         this.blocked[y * 60 + x] =
           p.y < 100 ||
           p.y > 730 ||
-          fixedBlocked(p, 8) ||
+          this.terrain(p) ||
           buildings.some((b) => distanceToBuilding(p, b) < 8)
             ? 1
             : 0;
