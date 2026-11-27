@@ -12,6 +12,10 @@ export class PathfindingSystem {
   private blocked = new Uint8Array(4500);
   private cache = new Map<number, Int32Array>();
   private signature = "";
+  invalidate() {
+    this.signature = "";
+    this.cache.clear();
+  }
   rebuild(buildings: BuildingEntity[]) {
     buildings = buildings.filter((b) => !b.disabled);
     const s = JSON.stringify(buildings.map((b) => [b.type, b.x, b.y, b.angle]));
@@ -76,17 +80,17 @@ export class PathfindingSystem {
     if (!field) {
       field = new Int32Array(4500).fill(-1);
       field[eid] = eid;
-      const q = [eid];
-      for (let i = 0; i < q.length; i++) {
+      const q = new Int32Array(4500);
+      q[0] = eid;
+      let tail = 1;
+      for (let i = 0; i < tail; i++) {
         const n = q[i],
           x = n % 60,
           y = Math.floor(n / 60);
-        for (const [dx, dy] of [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ]) {
+        // Avoid allocating four coordinate arrays per visited cell.
+        for (let direction = 0; direction < 4; direction++) {
+          const dx = direction === 0 ? 1 : direction === 1 ? -1 : 0;
+          const dy = direction === 2 ? 1 : direction === 3 ? -1 : 0;
           const xx = x + dx,
             yy = y + dy,
             id = yy * 60 + xx;
@@ -100,10 +104,10 @@ export class PathfindingSystem {
           )
             continue;
           field[id] = n;
-          q.push(id);
+          q[tail++] = id;
         }
       }
-      if (this.cache.size >= 64)
+      if (this.cache.size >= 256)
         this.cache.delete(this.cache.keys().next().value!);
       this.cache.set(eid, field);
     }

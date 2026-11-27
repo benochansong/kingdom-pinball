@@ -3,7 +3,7 @@ import type { ArmyData, UnitEntity, UnitKind } from "./types";
 export const rankForXp = (xp: number) =>
   xp >= 500 ? 5 : xp >= 250 ? 4 : xp >= 100 ? 3 : xp >= 35 ? 2 : 1;
 export const maxHp = (u: UnitEntity) =>
-  unitConfig(u.kind).hp *
+  u.maxHpOverride ?? unitConfig(u.kind).hp *
   (u.rank >= 3 ? 1 + [0, 0, 0, 0.1, 0.15, 0.2][u.rank] : 1);
 export function counter(attacker: UnitKind, defender: UnitKind): number {
   return (

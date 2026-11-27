@@ -99,7 +99,7 @@ export function sanitizeMagic(raw: unknown): MagicData {
     balls: (Array.isArray(l.balls) ? l.balls : [])
       .filter(
         (id: Element) =>
-          ELEMENTS.some((e) => e.id === id) && d.research[id] > 0,
+          ELEMENTS.some((e) => e.id === id) && (id==="steel" || d.research[id] > 0),
       )
       .slice(0, 4),
     spells: (Array.isArray(l.spells) ? l.spells : [])

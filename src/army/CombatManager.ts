@@ -34,8 +34,12 @@ export class CombatManager {
   onProjectileImpact?: (projectile: Projectile) => boolean;
   movementFactor: (u: UnitEntity) => number = () => 1;
   intervalFactor: (u: UnitEntity) => number = () => 1;
-  damageFilter: (u: UnitEntity, amount: number) => number = (_u, amount) =>
-    amount;
+  damageFilter: (
+    u: UnitEntity,
+    amount: number,
+    source?: UnitEntity,
+    sphere?: boolean,
+  ) => number = (_u, amount) => amount;
   sphereFactor: (u: UnitEntity) => number = () => 1;
   onSphereContact?: (u: UnitEntity, actual: number) => void;
   private armyFor(u: UnitEntity) {
@@ -86,7 +90,7 @@ export class CombatManager {
     if (target.hp <= 0 || !this.enabled()) return;
     const actual = Math.min(
       target.hp,
-      Math.max(0, this.damageFilter(target, amount)),
+      Math.max(0, this.damageFilter(target, amount, source, sphere)),
     );
     target.hp -= actual;
     this.onDamage?.(target, actual, sphere);

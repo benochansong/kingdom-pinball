@@ -53,7 +53,7 @@ export class BallManager {
       this.states.get(b.id)!.temporary = b !== this.physics.ball;
   }
   state(b = this.physics.ball) {
-    this.sync();
+    if(b&&!this.states.has(b.id))this.sync();
     return b ? this.states.get(b.id) : undefined;
   }
   transform(b: Matter.Body, type: Element, until: number) {

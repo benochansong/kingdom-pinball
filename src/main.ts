@@ -1,3 +1,11 @@
+import {
+  createCampaignLab,
+  createCampaignLabSave,
+  mountCampaignLab,
+} from "./dev/CampaignLab";
+import { CampaignManager } from "./campaign/CampaignManager";
+import { CampaignUI } from "./ui/CampaignUI";
+import "./campaign.css";
 import { MagicUI } from "./ui/MagicUI";
 import "./magic.css";
 import Phaser from "phaser";
@@ -25,11 +33,16 @@ const lab =
 const warLab =
   import.meta.env.DEV &&
   new URLSearchParams(location.search).get("war-lab") === "1";
-const model = warLab
-  ? createWarLab()
-  : lab
-    ? createLabModel()
-    : new GameStateManager();
+const campaignLab =
+  import.meta.env.DEV &&
+  new URLSearchParams(location.search).get("campaign-lab") === "1";
+const model = campaignLab
+  ? createCampaignLab()
+  : warLab
+    ? createWarLab()
+    : lab
+      ? createLabModel()
+      : new GameStateManager();
 const audio = new AudioManager(model);
 const ui = new UIManager(model, audio);
 const economyUI = new EconomyUI(ui, model);
@@ -37,6 +50,11 @@ const buildUI = new BuildUI(ui, model);
 const armyUI = new ArmyUI(ui, model);
 const warUI = new WarUI(ui, model);
 const magicUI = new MagicUI(ui, model);
+const campaign = new CampaignManager(
+  model,
+  campaignLab ? createCampaignLabSave() : undefined,
+);
+const campaignUI = new CampaignUI(ui, campaign);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -47,13 +65,15 @@ const game = new Phaser.Game({
   banner: false,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   fps: { target: 60 },
-  scene: [new PinballScene(model, audio, () => ui.render())],
+  scene: [new PinballScene(model, audio, () => ui.render(), campaign)],
 });
-const disposeLab = warLab
-  ? mountWarLab(model, ui, game)
-  : lab
-    ? mountMilitaryLab(model, ui, game)
-    : undefined;
+const disposeLab = campaignLab
+  ? mountCampaignLab(campaign, ui, game)
+  : warLab
+    ? mountWarLab(model, ui, game)
+    : lab
+      ? mountMilitaryLab(model, ui, game)
+      : undefined;
 const abort = new AbortController();
 const keys = new Set<string>();
 const controlCodes = [
@@ -165,6 +185,16 @@ window.addEventListener("pagehide", () => model.checkpoint(), {
 window.addEventListener(
   "storage",
   (event) => {
+    if (model.sandboxKind) return;
+    if (campaign.handleStorageConflict(event.key)) {
+      ui.open(
+        "캠페인 저장 충돌",
+        `<p>다른 창에서 저장한 진행을 보호하기 위해 현재 창의 저장을 중단했습니다. 슬롯을 다시 불러온 뒤 계속하세요.</p><button data-action="campaign:load:${campaign.slot}">최신 슬롯 불러오기</button>`,
+        false,
+      );
+      return;
+    }
+    if (campaign.active) return;
     if (
       model.mode === "kingdom" &&
       event.key === (model.war ? WAR_KEY : ECONOMY_KEY)
@@ -182,6 +212,7 @@ if (import.meta.hot)
     economyUI.dispose();
     buildUI.dispose();
     armyUI.dispose();
+    campaignUI.dispose();
     magicUI.dispose();
     warUI.dispose();
     disposeLab?.();

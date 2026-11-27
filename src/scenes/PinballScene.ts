@@ -1,3 +1,5 @@
+import {CampaignRenderer} from "../campaign/CampaignRenderer";
+import type {CampaignManager} from "../campaign/CampaignManager";
 import { MagicRenderer } from "../magic/MagicRenderer";
 import Phaser from "phaser";
 import { WarRenderer } from "../war/WarRenderer";
@@ -21,10 +23,12 @@ export class PinballScene extends Phaser.Scene {
   private armyRenderer?: ArmyRenderer;
   private warRenderer?: WarRenderer;
   private magicRenderer?: MagicRenderer;
+  private campaignRenderer?:CampaignRenderer;
   constructor(
     private model: GameStateManager,
     private audio: AudioManager,
     private renderUI: () => void,
+    private campaign?:CampaignManager,
   ) {
     super("greenwood");
   }
@@ -65,6 +69,7 @@ export class PinballScene extends Phaser.Scene {
     this.armyRenderer = new ArmyRenderer(this, this.model);
     this.warRenderer = new WarRenderer(this, this.model);
     this.magicRenderer = new MagicRenderer(this, this.model);
+    if(this.campaign)this.campaignRenderer=new CampaignRenderer(this,this.campaign);
     this.shadow = this.add.ellipse(0, 0, 23, 13, 0x051c20, 0.65).setDepth(18);
     this.sphere = this.add
       .image(554, 802, "sphere")
@@ -82,6 +87,7 @@ export class PinballScene extends Phaser.Scene {
     this.armyRenderer?.draw();
     this.warRenderer?.draw();
     this.magicRenderer?.draw();
+    this.campaignRenderer?.draw();
     const economy =
       this.model.mode === "kingdom" ? this.model.economy : undefined;
     const artKey = `${this.model.war ? "war" : this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;

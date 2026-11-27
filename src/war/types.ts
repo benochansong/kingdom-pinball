@@ -39,6 +39,7 @@ export interface WarOptions {
   tutorial: boolean;
 }
 export interface Structure {
+  castleMultiplier?: number;
   id: string;
   side: Side;
   type: string;

@@ -1,0 +1,86 @@
+{
+  "kind": "Node CPU, not render FPS",
+  "measurements": [
+    {
+      "region": "greenwood",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 9,
+      "livingUnits": 109,
+      "cpuMs": 2881,
+      "p95FrameCpuMs": 38.51
+    },
+    {
+      "region": "shadow",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 10,
+      "livingUnits": 96,
+      "cpuMs": 3155,
+      "p95FrameCpuMs": 43.71
+    },
+    {
+      "region": "iron",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 8,
+      "livingUnits": 101,
+      "cpuMs": 3422,
+      "p95FrameCpuMs": 46.61
+    },
+    {
+      "region": "desert",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 9,
+      "livingUnits": 100,
+      "cpuMs": 3933,
+      "p95FrameCpuMs": 48.9
+    },
+    {
+      "region": "frost",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 9,
+      "livingUnits": 103,
+      "cpuMs": 3308,
+      "p95FrameCpuMs": 47.2
+    },
+    {
+      "region": "volcano",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 10,
+      "livingUnits": 101,
+      "cpuMs": 3708,
+      "p95FrameCpuMs": 51.62
+    },
+    {
+      "region": "arcane",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 10,
+      "livingUnits": 96,
+      "cpuMs": 3800,
+      "p95FrameCpuMs": 46.27
+    },
+    {
+      "region": "dark",
+      "simulationSeconds": 5,
+      "initialBalls": 10,
+      "initialUnits": 151,
+      "endingBalls": 9,
+      "livingUnits": 99,
+      "cpuMs": 3309,
+      "p95FrameCpuMs": 48.29
+    }
+  ],
+  "environment": "Windows Node 24; build checks also ran during capture; short synthetic CPU sample, not an isolated hardware benchmark"
+}

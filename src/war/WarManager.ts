@@ -217,6 +217,8 @@ export function freshWar(options: Partial<WarOptions> = {}): WarData {
   return w;
 }
 export class WarManager {
+  objectiveControlled = false;
+  environmentRule?: (item: BlueprintItem) => string | null;
   readonly player: EconomyManager;
   readonly enemy: EconomyManager;
   readonly army: ArmyManager;
@@ -548,6 +550,8 @@ export class WarManager {
     return null;
   }
   placementRule(item: BlueprintItem, ignore?: string) {
+    const environmentError = this.environmentRule?.(item);
+    if (environmentError) return environmentError;
     if (this.data.result) return "종료된 전쟁입니다.";
     if (item.y < 300) return "적 왕국의 건설 구역입니다.";
     if (!this.preparing)
@@ -847,7 +851,7 @@ export class WarManager {
       return "강화 자원이 부족합니다.";
     const ratio = s.hp / s.maxHp;
     s.level++;
-    s.maxHp = CASTLE_HP[s.level - 1];
+    s.maxHp = CASTLE_HP[s.level - 1] * (s.castleMultiplier ?? 1);
     s.hp = s.maxHp * ratio;
     s.armor += 3;
     if (side === "ally") this.data.stats.upgrades++;
@@ -1023,12 +1027,14 @@ export class WarManager {
               : this.data.ai.strategy === "siege"
                 ? "siege"
                 : "frontline";
-    const close = all
-      .filter((t) => t.side !== u.side && t.hp > 0)
-      .sort(
-        (a, b) =>
-          Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y),
-      )[0];
+    const engagement =
+      order === "frontline" ? 170 : order === "defend" ? 190 : 70;
+    const close = all.some(
+      (t) =>
+        t.side !== u.side &&
+        t.hp > 0 &&
+        (t.x - u.x) ** 2 + (t.y - u.y) ** 2 < engagement * engagement,
+    );
     if (
       u.kind === "healer" &&
       all.some(
@@ -1039,13 +1045,7 @@ export class WarManager {
       )
     )
       return false;
-    if (
-      close &&
-      Math.hypot(close.x - u.x, close.y - u.y) <
-        (order === "frontline" ? 170 : order === "defend" ? 190 : 70) &&
-      order !== "retreat"
-    )
-      return false;
+    if (close && order !== "retreat") return false;
     const lane = allied ? this.data.lane : this.data.ai.lane,
       nav = this.army.navigation,
       combat = this.army.combat;
@@ -1262,7 +1262,7 @@ export class WarManager {
       this.data.stats.maxPower,
       this.army.power,
     );
-    if (!castle.hp || !enemy.hp) {
+    if (!castle.hp || (!this.objectiveControlled && !enemy.hp)) {
       this.finish(
         !castle.hp && !enemy.hp ? "draw" : !enemy.hp ? "victory" : "defeat",
         !castle.hp && !enemy.hp
@@ -1298,6 +1298,7 @@ export class WarManager {
       this.notice("royalSiege", "ROYAL SIEGE · 적 왕궁 보호 해제!");
     }
     if (
+      !this.objectiveControlled &&
       this.data.options.type === "defense" &&
       now >= (this.data.options.limit || 900) * 1000 &&
       !this.activeEnemies.length &&
@@ -1307,6 +1308,7 @@ export class WarManager {
       return;
     }
     if (
+      !this.objectiveControlled &&
       this.data.options.type !== "defense" &&
       this.data.options.limit > 0 &&
       now >= this.data.options.limit * 1000

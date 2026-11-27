@@ -27,6 +27,7 @@ import { PathfindingSystem } from "./PathfindingSystem";
 import { maxHp, attackPower } from "./DamageCalculator";
 import { formationPosition } from "./FormationManager";
 export class ArmyManager {
+  unlockExtra?:(kind:UnitKind)=>string|null;
   externalCombat = false;
   side: "ally" | "enemy" = "ally";
   spawnOverride?: (b: BuildingEntity) => { x: number; y: number } | null;
@@ -106,6 +107,7 @@ export class ArmyManager {
     });
   }
   unlock(kind: UnitKind, building: BuildingEntity): string | null {
+    const extra=this.unlockExtra?.(kind);if(extra)return extra;
     const c = unitConfig(kind);
     if (building.disabled) return "파괴된 시설을 먼저 재건하세요.";
     if (building.type !== c.building)

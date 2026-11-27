@@ -174,7 +174,7 @@ export function sanitizeWar(raw: unknown): WarData | null {
       ids.add(s.id);
       const level = Math.floor(n(s.level, 1, 5, 1)),
         maxHp = s.castle
-          ? CASTLE_HP[level - 1]
+          ? CASTLE_HP[level - 1] * n(s.castleMultiplier, 1, 1.3, 1)
           : (BUILDING_HEALTH[s.type]?.[0] ?? 350) * (1 + (level - 1) * 0.35);
       return [
         {
@@ -187,6 +187,9 @@ export function sanitizeWar(raw: unknown): WarData | null {
           level,
           hp: n(s.hp, maxHp, maxHp),
           maxHp,
+          castleMultiplier: s.castle
+            ? n(s.castleMultiplier, 1, 1.3, 1)
+            : undefined,
           armor: (BUILDING_HEALTH[s.type]?.[1] ?? 10) + (level - 1) * 3,
           lastDamage: n(s.lastDamage, -10000, 1e9, -10000),
           lastSphere: n(s.lastSphere, -10000, 1e9, -10000),

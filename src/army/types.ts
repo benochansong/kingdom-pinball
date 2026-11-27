@@ -21,6 +21,8 @@ export type UnitState =
   | "stunned"
   | "dead";
 export interface UnitEntity {
+  maxHpOverride?:number;
+  bossName?:string;
   kingdomId?: string;
   id: string;
   kind: UnitKind;

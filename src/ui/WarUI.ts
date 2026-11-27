@@ -89,7 +89,7 @@ export class WarUI {
       this.render();
     };
     this.disposeState = game.events.on("state", ({ state }) => {
-      if (game.war && state === "over") this.result(game.war.data.result!);
+      if (game.war && !game.sessionExtension && state === "over") this.result(game.war.data.result!);
       this.render();
     });
   }

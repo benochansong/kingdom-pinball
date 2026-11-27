@@ -24,6 +24,7 @@ import { WarSaveManager } from "../war/WarSaveManager";
 import type { WarOptions } from "../war/types";
 import { WAR_TARGETS } from "../config/war";
 import { MagicManager } from "../magic/MagicManager";
+import type { SessionExtension } from "../campaign/types";
 
 export class GameStateManager {
   readonly events = new EventBus();
@@ -40,6 +41,7 @@ export class GameStateManager {
   war?: WarManager;
   magic?: MagicManager;
   enemyMagic?: MagicManager;
+  sessionExtension?: SessionExtension;
   lastBattleResult?: BattleRecord;
   private practice?: {
     magic?: MagicManager;
@@ -93,6 +95,7 @@ export class GameStateManager {
     this.checkpoint();
     this.clearInputs();
     const snapshot = {
+      sessionExtension: this.sessionExtension,
       physics: this.physics,
       score: this.score,
       tilt: this.tilt,
@@ -113,6 +116,7 @@ export class GameStateManager {
       respawnAt: this.respawnAt,
     };
     this.physics = new PinballPhysics();
+    this.sessionExtension = undefined;
     this.economy = undefined;
     this.army = undefined;
     this.war = undefined;
@@ -202,6 +206,8 @@ export class GameStateManager {
       this.physics.setTargetEnabled(s.fixed!, s.hp > 0);
   }
   start(tutorial = !this.save.data.tutorialDone): void {
+    this.sandboxExit?.();
+    if (this.sessionExtension) this.menu();
     this.restorePractice();
     this.army = undefined;
     this.testBall?.dispose();
@@ -234,6 +240,8 @@ export class GameStateManager {
     this.events.emit("message", { text: ko.ready });
   }
   startKingdom(fresh: boolean): void {
+    this.sandboxExit?.();
+    if (this.sessionExtension) this.menu();
     this.restorePractice();
     this.stopTestBall();
     this.finishRecord();
@@ -324,6 +332,7 @@ export class GameStateManager {
     if (this.saveConflict) return;
     this.syncEconomy();
     if (this.war) {
+      this.war.data.time = this.time;
       this.war.checkpoint();
       return;
     }
@@ -620,6 +629,11 @@ export class GameStateManager {
   }
   menu(): void {
     this.sandboxExit?.();
+    if (this.sessionExtension) {
+      this.checkpoint();
+      this.sessionExtension.dispose();
+      this.sessionExtension = undefined;
+    }
     this.restorePractice();
     this.stopTestBall();
     if (this.builder) this.builder.active = false;
@@ -736,6 +750,7 @@ export class GameStateManager {
         this.magic?.tick(ms / 1000);
         this.enemyMagic?.tick(ms / 1000);
         this.war.tick(ms / 1000, this.time);
+        this.sessionExtension?.afterStep(ms / 1000);
       }
       return;
     }
@@ -757,6 +772,7 @@ export class GameStateManager {
         ball,
         position: { ...ball.position },
       }));
+      this.sessionExtension?.beforeStep(dt);
       this.physics.step(dt, !this.tilt.tilted);
       this.magic?.balls?.recover(dt, this.time);
       const recovered = this.recovery.update(this.physics, dt, this.time);
@@ -797,6 +813,7 @@ export class GameStateManager {
       if (this.magic?.balls?.drain(this.time)) this.recovery.reset();
       if (this.war) this.war.tick(dt, this.time);
       else this.army?.tick(dt, this.time);
+      this.sessionExtension?.afterStep(dt);
       if (this.state !== "playing") break;
       if (this.physics.ball && this.physics.ball.position.y > PHYSICS.drainY)
         this.drain();
@@ -880,6 +897,7 @@ export class GameStateManager {
   }
   private drain(): void {
     if (!this.physics.ball) return;
+    if (this.sessionExtension?.onLoss?.()) return;
     if (this.practice) {
       this.physics.spawn();
       this.tilt.reset();
@@ -949,6 +967,7 @@ export class GameStateManager {
   }
   dispose(): void {
     this.sandboxExit?.();
+    this.sessionExtension?.dispose();
     this.restorePractice();
     this.stopTestBall();
     this.physics.dispose();

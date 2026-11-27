@@ -158,14 +158,29 @@ export class AudioManager {
       return;
     const now = this.context.currentTime;
     if (now < this.nextNote) return;
+    const regional: Record<
+      string,
+      { ratio: number; tempo: number; wave: OscillatorType }
+    > = {
+      greenwood: { ratio: 1, tempo: 1, wave: "triangle" },
+      shadow: { ratio: 0.75, tempo: 1.12, wave: "sine" },
+      iron: { ratio: 0.67, tempo: 0.88, wave: "triangle" },
+      desert: { ratio: 1.12, tempo: 1.06, wave: "sine" },
+      frost: { ratio: 1.5, tempo: 1.22, wave: "sine" },
+      volcano: { ratio: 0.5, tempo: 0.82, wave: "triangle" },
+      arcane: { ratio: 1.33, tempo: 0.95, wave: "sine" },
+      dark: { ratio: 0.56, tempo: 0.78, wave: "triangle" },
+    };
+    const theme = regional[this.game.sessionExtension?.regionId ?? "greenwood"];
+    const bossPhase = this.game.sessionExtension?.bossPhase?.() ?? 0;
     const melody = [
       293.66, 440, 349.23, 392, 293.66, 261.63, 220, 261.63, 293.66, 349.23,
       440, 523.25, 440, 392, 349.23, 261.63,
     ];
     this.tone(
-      melody[this.note % melody.length],
+      melody[this.note % melody.length] * theme.ratio,
       1.2,
-      "triangle",
+      theme.wave,
       0.09,
       undefined,
       0,
@@ -191,19 +206,23 @@ export class AudioManager {
         0,
         true,
       );
+    if (bossPhase)
+      this.tone(55 + bossPhase * 11, 0.18, "triangle", 0.045, 30, 0, true);
     this.note++;
     const combat = this.game.army?.data.battle;
     if (combat)
       this.tone(this.note % 2 ? 85 : 65, 0.15, "triangle", 0.1, 35, 0, true);
     this.nextNote =
       now +
-      (combat
-        ? combat.enemies.filter((u) => u.hp > 0).length > 10
-          ? 0.28
-          : 0.36
-        : this.game.army?.population
-          ? 0.46
-          : 0.52);
+      theme.tempo *
+        (bossPhase ? 0.9 : 1) *
+        (combat
+          ? combat.enemies.filter((u) => u.hp > 0).length > 10
+            ? 0.28
+            : 0.36
+          : this.game.army?.population
+            ? 0.46
+            : 0.52);
   }
   private tone(
     hz: number,

@@ -290,6 +290,7 @@ export class BuildingManager {
     }
     let error = next.length > this.limit ? "건물 수 제한을 초과합니다." : null;
     for (const b of next) {
+      error ??= this.placementRule?.(b,b.id) ?? null;
       if (
         next.filter((x) => x.type === b.type).length >
         buildingConfig(b.type)!.limit
