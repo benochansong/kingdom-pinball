@@ -144,9 +144,14 @@ export interface Snapshot {
     score: number;
     energyWait: number;
     launched?: boolean;
+    rescue?: import("../systems/RescueCannon").RescueData;
     protection?: import("../systems/BallProtection").ProtectionData;
   };
-  opponent: { balls: BallView[]; flippers: number[] };
+  opponent: {
+    balls: BallView[];
+    flippers: number[];
+    rescue?: import("../systems/RescueCannon").RescueData;
+  };
   battlefield: {
     units: UnitView[];
     structures: StructureView[];

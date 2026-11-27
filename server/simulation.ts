@@ -702,7 +702,9 @@ export class ServerSimulation {
             g.charge + PHYSICS.stepMs / PHYSICS.launcher.chargeMs,
           );
         g.score.combo.tick(this.time);
+        g.updateRescue();
         g.physics.step(PHYSICS.stepMs / 1000, !g.tilt.tilted);
+        g.updateRescue();
         g.updateProtection();
         g.magic!.tick(PHYSICS.stepMs / 1000);
         g.magic!.balls!.recover(PHYSICS.stepMs / 1000, this.time);
@@ -721,7 +723,11 @@ export class ServerSimulation {
             : "ready";
           g.recovery.reset();
         }
-        if (g.physics.ball && g.physics.ball.position.y > PHYSICS.drainY) {
+        if (
+          g.physics.ball &&
+          !g.physics.heldBalls.has(g.physics.ball.id) &&
+          g.physics.ball.position.y > PHYSICS.drainY
+        ) {
           if (!g.tryBallSave()) {
             g.physics.removeBall();
             g.magic!.endMulti();
@@ -889,8 +895,9 @@ export class ServerSimulation {
         energyWait: Math.max(0, this.respawn[seat] - this.time),
         launched: g.physics.launched,
         protection: { ...g.protection.data },
+        rescue: structuredClone(g.rescue),
       },
-      opponent: table(other),
+      opponent: { ...table(other), rescue: structuredClone(other.rescue) },
       battlefield: {
         units: this.war.army.combat.units
           .filter((u) => u.hp > 0)

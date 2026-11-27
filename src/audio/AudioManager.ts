@@ -139,8 +139,26 @@ export class AudioManager {
         );
       }),
       bus.on("flipper", () => this.tone(95, 0.065, "triangle", 0.25, 35)),
-      bus.on("ballProtection", ({kind}) => {
-        this.tone(kind === "save" ? 660 : 220, .16, "triangle", .12, kind === "save" ? 880 : 740);
+      bus.on("rescue", ({ phase }) => {
+        if (phase === "RESCUE_DETECTED")
+          this.tone(330, 0.06, "triangle", 0.09, 440);
+        if (phase === "RESCUE_CAPTURED")
+          this.tone(110, 0.06, "square", 0.06, 75);
+        if (phase === "RESCUE_CHARGING")
+          this.tone(220, 0.25, "sine", 0.09, 660);
+        if (phase === "RESCUE_LAUNCHING") {
+          this.tone(100, 0.18, "sawtooth", 0.13, 60);
+          this.tone(660, 0.2, "triangle", 0.09, 990);
+        }
+      }),
+      bus.on("ballProtection", ({ kind }) => {
+        this.tone(
+          kind === "save" ? 660 : 220,
+          0.16,
+          "triangle",
+          0.12,
+          kind === "save" ? 880 : 740,
+        );
       }),
       bus.on("launch", ({ power }) => {
         this.tone(120 + power * 100, 0.28, "sawtooth", 0.13, 900);

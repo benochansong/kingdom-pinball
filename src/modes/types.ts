@@ -28,6 +28,7 @@ export interface PhysicsSettings {
   balls: number;
 }
 export interface SandboxSettings {
+  rescueShots: number;
   unlimited: boolean;
   production: number;
   cost: number;

@@ -1,3 +1,5 @@
+import { sanitizeRescue, type RescueData } from "./RescueCannon";
+import { sanitizeProtection, type ProtectionData } from "./BallProtection";
 import {
   defaultPresentation,
   sanitizePresentation,
@@ -19,7 +21,18 @@ export interface RecordEntry {
   seconds: number;
   date: string;
 }
+export interface ClassicRun {
+  rescue: RescueData;
+  protection?: ProtectionData;
+  remaining: number;
+  score: number;
+  hits: number;
+  maxCombo: number;
+  time: number;
+  inflight: boolean;
+}
 export interface SaveData {
+  classicRun?: ClassicRun;
   version: 1;
   highScore: number;
   maxCombo: number;
@@ -77,8 +90,23 @@ export class SaveManager {
         return;
       const input = raw as Partial<SaveData>;
       const settings: Partial<Settings> = input.settings ?? {};
+      const r = input.classicRun;
+      const classicRun: ClassicRun | undefined =
+        r && typeof r === "object"
+          ? {
+              rescue: sanitizeRescue(r.rescue, "classic-restored"),
+              protection: sanitizeProtection(r.protection, number(r.time)),
+              remaining: Math.floor(number(r.remaining, 0, 5)),
+              score: number(r.score),
+              hits: number(r.hits),
+              maxCombo: number(r.maxCombo),
+              time: number(r.time),
+              inflight: r.inflight === true,
+            }
+          : undefined;
       this.data = {
         ...defaults(),
+        classicRun,
         highScore: number(input.highScore),
         maxCombo: number(input.maxCombo),
         plays: number(input.plays),

@@ -8,6 +8,7 @@ export type PuzzleKind =
   | "rescue"
   | "oneball";
 export interface PuzzleDefinition {
+  rescueShots?: number;
   id: number;
   name: string;
   tier: string;

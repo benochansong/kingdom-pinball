@@ -22,6 +22,10 @@ export class ReleaseUI {
   constructor(ui: UIManager) {
     this.language = ui.game.save.data.settings.presentation.language;
     const welcome = ui.root.querySelector<HTMLElement>(".welcome")!;
+    welcome.insertAdjacentHTML(
+      "beforeend",
+      '<button data-action="classic-continue">클래식 이어하기 · CONTINUE CLASSIC</button>',
+    );
     const groups = [
       [
         "주요 플레이",
@@ -37,6 +41,7 @@ export class ReleaseUI {
         "게임 모드",
         [
           "start",
+          "classic-continue",
           "new-kingdom",
           "continue-kingdom",
           "mode:setup:survival",
@@ -82,7 +87,7 @@ export class ReleaseUI {
         if (!el.children.length) el.hidden = true;
       });
     welcome.querySelector(".edition-note")!.textContent =
-      "v0.11.1 BETA · ONLINE BETA";
+      "v0.11.2 BETA · ONLINE BETA";
     welcome.append(welcome.querySelector(".edition-note")!);
     this.resize = new ResizeObserver((entries) => {
       for (const { target } of entries) {

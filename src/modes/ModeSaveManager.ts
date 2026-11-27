@@ -146,6 +146,7 @@ export function sanitizeOptions(raw: unknown): ModeOptions {
       (d.sandbox as any)[key] =
         typeof sb[key] === "boolean" ? sb[key] : d.sandbox[key];
   }
+  d.sandbox.rescueShots = Math.floor(bounded(sb.rescueShots, 0, 10, 2));
   d.sandbox.production = bounded(sb.production, 0.25, 3, 1);
   d.sandbox.cost = bounded(sb.cost, 0, 2, 0);
   d.sandbox.population = Math.floor(bounded(sb.population, 10, 100, 100));

@@ -104,6 +104,12 @@ export class ModeUI {
             manager.sandbox.settings,
             sanitizeOptions(candidate).sandbox,
           );
+          if (key === "rescueShots") {
+            const d = manager.game.rescue;
+            d.total = manager.sandbox.settings.rescueShots;
+            d.used = Math.min(d.used, d.total);
+            manager.game.checkpoint();
+          }
           manager.sandbox.applyMagic();
           manager.persist();
         }
@@ -558,7 +564,7 @@ export class ModeUI {
       )
         .map(
           ([key, value]) =>
-            `<label>${key}<input data-sandbox="${key}" ${typeof value === "boolean" ? `type="checkbox" ${value ? "checked" : ""}` : `type="number" min="${key === "population" ? 10 : key === "cost" ? 0 : 0.25}" max="${key === "population" ? 100 : key === "production" ? 3 : key === "cost" ? 2 : 4}" step="${key === "population" ? 1 : 0.25}" value="${value}"`}></label>`,
+            `<label>${key}<input data-sandbox="${key}" ${typeof value === "boolean" ? `type="checkbox" ${value ? "checked" : ""}` : `type="number" min="${key === "rescueShots" ? 0 : key === "population" ? 10 : key === "cost" ? 0 : 0.25}" max="${key === "rescueShots" ? 10 : key === "population" ? 100 : key === "production" ? 3 : key === "cost" ? 2 : 4}" step="${key === "population" || key === "rescueShots" ? 1 : 0.25}" value="${value}"`}></label>`,
         )
         .join(
           "",

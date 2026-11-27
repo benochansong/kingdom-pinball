@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.2-beta.1 — 2026-11-27
+
+- Replaced passive outlane guards and runtime rechargeable kickbacks with automatic Royal Rescue Cannons: same Matter body, exactly two shared shots per run.
+- Added safe capture/charge/fire, blocked-shot cancellation, persistent quotas, classic continuation and sandbox settings. BALL SAVE remains independent.
+- Added authoritative per-seat online snapshots, cannon graphics, HUD, synthetic audio and reduced-flash effects.
+- Verified 339 tests (2 existing skips), 240 controlled trajectories, 8 campaign regions and browser capture/fire/exhaustion/resume. Client and server builds passed.
+- See [the Korean 15-part report](docs/PHASE11_2.md) for evidence and limits.
+
 ## 0.11.1-beta.1 — 2026-11-27
 
 - Added two physical outlane guard bumpers with normal-directed rebound and no economic rewards. Kept open drain routes, original flipper contact physics and the global speed cap.

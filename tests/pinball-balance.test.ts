@@ -52,26 +52,12 @@ function drain(g: GameStateManager, x = 290) {
   g.update(10);
 }
 describe("Phase 11.1 protection and physical balance", () => {
-  it("returns real guard contacts above the outlane entrance while retaining physical drain routes", () => {
-    for (const guard of OUTLANE_GUARDS) {
-      let escapes = 0;
-      for (const offset of [-18, -9, 0, 9, 18])
-        for (const vx of [-4, 0, 4]) {
-          const p = new PinballPhysics([]);
-          p.spawn();
-          p.launch(0.8);
-          Matter.Body.setPosition(p.ball!, { x: guard.x + offset, y: 745 });
-          Matter.Body.setVelocity(p.ball!, { x: vx, y: 8 });
-          let minY = 745;
-          for (let i = 0; i < 720; i++) {
-            p.step(1 / 240);
-            minY = Math.min(minY, p.ball!.position.y);
-          }
-          if (minY < 675) escapes++;
-          p.dispose();
-        }
-      expect(escapes).toBeGreaterThan(0);
-    }
+  it("removes the former round guards while retaining physical drain routes", () => {
+    const table = new PinballPhysics([]);
+    expect(
+      table.engine.world.bodies.some((b) => b.label.includes("outlane-guard")),
+    ).toBe(false);
+    table.dispose();
     let drains = 0;
     for (const x of [70, 110, 140, 436, 466, 510])
       for (const vx of [-7, 0, 7]) {
@@ -130,7 +116,7 @@ describe("Phase 11.1 protection and physical balance", () => {
           expect(a.velocity.y).toBeCloseTo(b.velocity.y, 8);
         }
   });
-  it("counts actual facility yield on the physical ball and gives passive guards no economic reward", () => {
+  it("counts actual facility yield on the physical ball and gives outlane travel no economic reward", () => {
     const { g } = fixture();
     g.startKingdom(true);
     launch(g);
@@ -274,24 +260,18 @@ describe("Phase 11.1 protection and physical balance", () => {
       g.dispose();
     },
   );
-  it("uses one finite kickback impulse on the same body, requiring alternating valid targets to recharge", () => {
+  it("ignores legacy kickback charges without creating extra rescue shots", () => {
     const { g } = fixture();
     g.start(false);
     enter(g);
-    const p = g.protection;
-    for (let i = 0; i < 8; i++)
-      p.hit(i % 2 ? "forest" : "bonus", 100, 1000 + i * 1000);
-    expect(p.data.left).toBe(1);
-    const b = g.physics.ball!;
-    Matter.Body.setPosition(b, { x: 110, y: 720 });
-    Matter.Body.setVelocity(b, { x: 0, y: 5 });
+    g.protection.data.left = 1;
+    const ball = g.physics.ball!;
+    Matter.Body.setPosition(ball, { x: 110, y: 720 });
+    Matter.Body.setVelocity(ball, { x: 0, y: 5 });
     g.updateProtection();
-    expect(b.velocity.y).toBeLessThan(0);
-    expect(g.physics.ball).toBe(b);
-    expect(g.physics.balls).toHaveLength(1);
-    expect(p.data.left).toBe(0);
-    for (let i = 0; i < 20; i++) p.hit("bonus", 100, 10000 + i * 1000);
-    expect(p.data.left).toBe(0);
+    expect(ball.velocity.y).toBe(5);
+    expect(g.rescue.total).toBe(2);
+    expect(g.rescue.used).toBe(0);
     g.dispose();
   });
   it("counts each physical loss once and keeps bounded diagnostics", () => {
@@ -309,7 +289,7 @@ describe("Phase 11.1 protection and physical balance", () => {
     expect(p.telemetry.records[0].entryAngle).toBeTypeOf("number");
     p.dispose();
   });
-  it("places physical guards outside saved build footprints and clear of all eight regional devices", () => {
+  it("preserves legacy reserved construction footprints and clear of all eight regional devices", () => {
     expect(Object.keys(TERRAIN)).toHaveLength(8);
     for (const guard of OUTLANE_GUARDS) {
       expect(guard.y - guard.radius - 15).toBeGreaterThanOrEqual(748);
@@ -327,7 +307,7 @@ describe("Phase 11.1 protection and physical balance", () => {
     }
   });
   it.each(ELEMENTS.map((e) => e.id))(
-    "keeps %s collisions finite across both guard approaches",
+    "keeps %s collisions finite across both outlane approaches",
     (type) => {
       const { g } = fixture();
       g.startWar({ preparation: 180 });

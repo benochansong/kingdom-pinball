@@ -118,6 +118,10 @@ export class UIManager {
         this.close(false);
         this.game.start();
         break;
+      case "classic-continue":
+        this.close(false);
+        this.game.resumeClassic();
+        break;
       case "pause":
         this.pause();
         break;
@@ -130,7 +134,7 @@ export class UIManager {
         break;
       case "restart-confirm":
         this.close(false);
-        this.game.start(false);
+        this.game.restartClassic();
         break;
       case "home":
         if (this.game.state === "playing" || this.game.state === "paused")

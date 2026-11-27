@@ -58,6 +58,7 @@ export class BallManager {
   }
   transform(b: Matter.Body, type: Element, until: number) {
     this.sync();
+    if (this.physics.heldBalls.has(b.id)) return;
     const s = this.states.get(b.id)!;
     s.type = type;
     s.until = until;
@@ -73,6 +74,7 @@ export class BallManager {
   tick(now: number) {
     this.sync();
     for (const b of this.physics.balls) {
+      if (this.physics.heldBalls.has(b.id)) continue;
       const s = this.states.get(b.id)!;
       if (s.type !== "steel" && s.until <= now) this.transform(b, "steel", 0);
     }
@@ -112,7 +114,8 @@ export class BallManager {
   drain(now: number) {
     let promoted = false;
     for (const b of this.physics.balls) {
-      if (b.position.y <= PHYSICS.drainY) continue;
+      if (this.physics.heldBalls.has(b.id) || b.position.y <= PHYSICS.drainY)
+        continue;
       const m = this.data.multi;
       if (m?.storm && now - m.started < 5000 && m.saves < 5) {
         if (this.physics.balls.length > 1) {

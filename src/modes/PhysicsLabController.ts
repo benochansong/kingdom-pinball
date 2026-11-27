@@ -28,6 +28,7 @@ export class PhysicsLabController {
     p.bumperFactor = s.bumper;
     p.left.strength = p.right.strength = s.flipper;
     for (const b of p.balls) {
+      if (p.heldBalls.has(b.id)) continue;
       if (b.isStatic) continue;
       const c = element(g.magic?.balls?.state(b)?.type ?? "steel");
       const density = 0.004 * c.mass * s.mass;

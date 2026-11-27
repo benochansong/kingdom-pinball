@@ -137,6 +137,8 @@ export class PuzzleManager {
       s = host.session,
       d = PUZZLES[s.options.puzzle];
     g.sessionExtension!.flatBoard = true;
+    g.rescue.total = d.rescueShots ?? 0;
+    g.sessionExtension!.rescueEnabled = g.rescue.total > 0;
     host.battle.terrain?.dispose();
     host.battle.terrain = undefined;
     w.environmentRule = undefined;

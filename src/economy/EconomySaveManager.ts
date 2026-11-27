@@ -1,3 +1,4 @@
+import { sanitizeRescue } from "../systems/RescueCannon";
 import {
   ECONOMY,
   FACILITIES,
@@ -227,6 +228,7 @@ export function sanitizeEconomy(raw: unknown): EconomyData | null {
   data.army = sanitizeArmy(input.army);
   data.magic = sanitizeMagic(input.magic);
   data.pinball = sanitizeProtection(input.pinball, data.time);
+  data.rescue = sanitizeRescue(input.rescue, data.id);
   const capacity = new ResourceManager(data);
   for (const r of RESOURCE_IDS)
     data.resources[r] = finite(

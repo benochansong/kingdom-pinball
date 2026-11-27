@@ -1,7 +1,7 @@
 #ball-protection {
   position: static;
-  padding: .45rem .7rem;
-  font-size: .75rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.75rem;
   line-height: 1.5;
   color: #f0d68d;
   background: #183d34;
@@ -9,7 +9,9 @@
   word-break: keep-all;
   text-align: center;
 }
-#ball-protection[hidden] { display: none; }
+#ball-protection[hidden] {
+  display: none;
+}
 :root {
   font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
   color: #d7dfd2;
@@ -1189,4 +1191,43 @@ td:first-child {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+#royal-rescue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #183c32;
+  color: #f2d58d;
+  flex-wrap: wrap;
+  line-height: 1.3;
+}
+#royal-rescue[hidden] {
+  display: none;
+}
+#royal-rescue strong,
+.rescue-count {
+  white-space: nowrap;
+}
+#royal-rescue small {
+  font-size: 0.7em;
+}
+.rescue-shots {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.rescue-shot {
+  width: 18px;
+  text-align: center;
+}
+.rescue-shot.spent {
+  color: #63756c;
+  opacity: 0.5;
+}
+.rescue-active {
+  outline: 1px solid #f2d58d;
+  outline-offset: -2px;
 }

@@ -1,3 +1,4 @@
+import { freshRescue } from "../systems/RescueCannon";
 import { unitConfig } from "../config/army";
 import { maxHp } from "../army/DamageCalculator";
 import { CASTLE_HP } from "../config/war";
@@ -57,6 +58,14 @@ export class ModeBattle {
       limit: 0,
       tutorial: false,
     });
+    war.player.rescue = freshRescue(
+      s.id,
+      s.kind === "sandbox"
+        ? o.sandbox.rescueShots
+        : s.kind === "puzzle" || s.kind === "customTable"
+          ? 0
+          : 2,
+    );
     const start = STARTS[o.start];
     war.player.rank = ["sandbox", "bossRush", "roguelike"].includes(s.kind)
       ? 5
@@ -151,7 +160,11 @@ export class ModeBattle {
       }),
     );
     this.extension = {
-      ballProtection: s.kind !== "puzzle" && s.kind !== "customTable" && s.options.variant !== "oneCore",
+      rescueEnabled: s.kind !== "puzzle" && s.kind !== "customTable",
+      ballProtection:
+        s.kind !== "puzzle" &&
+        s.kind !== "customTable" &&
+        s.options.variant !== "oneCore",
       canAdvance: () => s.status === "playing",
       regionId: s.options.region,
       bossPhase: () => this.boss?.state.phase ?? 0,

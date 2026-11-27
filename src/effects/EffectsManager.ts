@@ -71,6 +71,18 @@ export class EffectsManager {
         );
       }),
       game.events.on("launch", () => this.burst(554, 800, 0x91e2ef, 16)),
+      game.events.on("rescue", ({ phase, x, y }) => {
+        if (phase === "RESCUE_LAUNCHING") {
+          this.flashes.set("rescue-shot", {
+            alpha: 0.7,
+            x,
+            y,
+            radius: 20,
+            color: 0xffdc81,
+          });
+          this.burst(x, y, 0xffdc81, 14);
+        }
+      }),
       game.events.on("ballProtection", ({ kind, x, y }) => {
         this.flashes.set(`protection-${kind}`, {
           alpha: 0.65,

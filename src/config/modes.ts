@@ -184,6 +184,7 @@ export const PHYSICS_LIMITS: Record<keyof PhysicsSettings, [number, number]> = {
   balls: [1, 10],
 };
 export const DEFAULT_SANDBOX: SandboxSettings = {
+  rescueShots: 2,
   unlimited: true,
   production: 1,
   cost: 0,

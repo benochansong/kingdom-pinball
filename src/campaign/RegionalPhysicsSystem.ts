@@ -157,6 +157,7 @@ export class RegionalPhysicsSystem {
     }
     if (!p.launched) return;
     for (const b of p.balls) {
+      if (p.heldBalls.has(b.id)) continue;
       const state = g.magic?.balls?.state(b),
         c = element(state?.type ?? "steel");
       let friction = r.friction;

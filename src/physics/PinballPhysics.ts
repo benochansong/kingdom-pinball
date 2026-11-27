@@ -2,7 +2,7 @@ import Matter from "matter-js";
 import { COLLISION, PHYSICS } from "../config/physics";
 import { RAILS, TARGETS, type TargetDefinition } from "../data/table";
 import { FlipperController } from "./FlipperController";
-import { OUTLANE_GUARDS, SLING, GUARD_REBOUND } from "../config/pinball";
+import { SLING } from "../config/pinball";
 import { PinballTelemetry } from "./PinballTelemetry";
 const { Engine, Bodies, Body, Composite, Events } = Matter;
 
@@ -43,8 +43,7 @@ export class PinballPhysics {
   private targets = new Map<number, TargetDefinition>();
   private incoming = new Map<number, { x: number; y: number }>();
   private slingAt = new Map<number, number>();
-  private guardAt = new Map<number, number>();
-  private guardPending: { ball: Matter.Body; x: number; y: number }[] = [];
+  readonly heldBalls = new Set<number>();
   private nextTargets: TargetDefinition[];
   addTarget(target: TargetDefinition) {
     if (this.nextTargets.some((t) => t.id === target.id)) return;
@@ -83,17 +82,6 @@ export class PinballPhysics {
     readonly preset: "standard" | "authored" = "standard",
   ) {
     this.nextTargets = targets;
-    for (const post of preset === "standard" ? OUTLANE_GUARDS : [])
-      Composite.add(
-        this.engine.world,
-        Bodies.circle(post.x, post.y, post.radius, {
-          isStatic: true,
-          restitution: 0.82,
-          friction: 0.015,
-          label: "outlane-guard",
-          collisionFilter: { category: COLLISION.wall },
-        }),
-      );
     for (const rail of RAILS) {
       const dx = rail.b[0] - rail.a[0];
       const dy = rail.b[1] - rail.a[1];
@@ -138,7 +126,7 @@ export class PinballPhysics {
         const ball = this.balls.find(
           (b) => b === pair.bodyA || b === pair.bodyB,
         );
-        if (!ball) continue;
+        if (!ball || this.heldBalls.has(ball.id)) continue;
         const incoming = this.incoming.get(ball.id) ?? { x: 0, y: 0 };
         const other =
           pair.bodyA === ball
@@ -178,26 +166,6 @@ export class PinballPhysics {
           }
         } else {
           this.onImpact(ball.position.x, ball.position.y, speed);
-          if (
-            other.label === "outlane-guard" &&
-            this.engine.timing.timestamp -
-              (this.guardAt.get(ball.id) ?? -Infinity) >=
-              GUARD_REBOUND.cooldownMs
-          ) {
-            const dx = ball.position.x - other.position.x,
-              dy = ball.position.y - other.position.y,
-              distance = Math.max(1, Math.hypot(dx, dy));
-            const nx = dx / distance,
-              ny = dy / distance;
-            if (-(incoming.x * nx + incoming.y * ny) > 70) {
-              this.guardAt.set(ball.id, this.engine.timing.timestamp);
-              this.guardPending.push({
-                ball,
-                x: other.position.x,
-                y: other.position.y,
-              });
-            }
-          }
           if (
             other.label === "sling" &&
             speed > 70 &&
@@ -271,25 +239,10 @@ export class PinballPhysics {
     for (const b of this.balls)
       this.incoming.set(b.id, { x: b.velocity.x * 60, y: b.velocity.y * 60 });
     Engine.update(this.engine, dt * 1000);
-    for (const { ball: b, x, y } of this.guardPending) {
-      const dx = b.position.x - x,
-        dy = b.position.y - y,
-        distance = Math.max(1, Math.hypot(dx, dy)),
-        nx = dx / distance,
-        ny = dy / distance;
-      const impulse = Math.max(
-        0,
-        GUARD_REBOUND.speed - (b.velocity.x * nx + b.velocity.y * ny) * 60,
-      );
-      Body.setVelocity(b, {
-        x: b.velocity.x + (nx * impulse) / 60,
-        y: b.velocity.y + (ny * impulse) / 60,
-      });
-    }
-    this.guardPending.length = 0;
     const ball = this.ball;
     if (!ball || !this.launched) return;
     for (const b of this.balls) {
+      if (this.heldBalls.has(b.id)) continue;
       for (const f of [this.left, this.right]) {
         const vx = b.velocity.x,
           vy = b.velocity.y;
@@ -351,8 +304,7 @@ export class PinballPhysics {
     this.extraBalls.clear();
     this.incoming.clear();
     this.slingAt.clear();
-    this.guardAt.clear();
-    this.guardPending.length = 0;
+    this.heldBalls.clear();
     this.ball = undefined;
     this.launched = false;
   }
@@ -362,8 +314,7 @@ export class PinballPhysics {
     this.extraBalls.delete(ball.id);
     this.incoming.delete(ball.id);
     this.slingAt.delete(ball.id);
-    this.guardAt.delete(ball.id);
-    this.guardPending = this.guardPending.filter((p) => p.ball !== ball);
+    this.heldBalls.delete(ball.id);
     if (this.ball === ball) {
       this.ball = this.extraBalls.values().next().value;
       if (this.ball) this.extraBalls.delete(this.ball.id);

@@ -27,7 +27,58 @@ import { MagicManager } from "../magic/MagicManager";
 import type { SessionExtension } from "../campaign/types";
 import { BallProtection, freshProtection } from "../systems/BallProtection";
 
+import {
+  RescueCannon,
+  freshRescue,
+  type RescueData,
+} from "../systems/RescueCannon";
+import { RESCUE } from "../config/rescue";
+
 export class GameStateManager {
+  private rescueController = new RescueCannon();
+  private classicRescue = freshRescue("classic-idle");
+  get rescue(): RescueData {
+    if (!this.economy) return this.classicRescue;
+    return (this.economy.data.rescue ??= freshRescue(this.economy.data.id));
+  }
+  updateRescue() {
+    const enabled =
+      RESCUE.rescueEnabled &&
+      !this.practice &&
+      !this.sandboxKind &&
+      !this.tilt.tilted &&
+      this.sessionExtension?.rescueEnabled !== false;
+    this.rescueController.update(
+      this.physics,
+      this.rescue,
+      this.time,
+      enabled,
+      this.magic?.balls?.state()?.type ?? "steel",
+      () => this.checkpoint(),
+      (phase, side, ball) => {
+        this.events.emit("rescue", {
+          phase,
+          side,
+          x: ball.position.x,
+          y: ball.position.y,
+          remaining: this.rescue.total - this.rescue.used,
+        });
+        if (phase === "RESCUE_LAUNCHING") {
+          this.recovery.reset();
+          this.events.emit("message", {
+            text: `RESCUE SHOT! · 왕실 구조 · ${this.rescue.total - this.rescue.used}회 남음${this.rescue.used === this.rescue.total ? " · NO RESCUE SHOTS LEFT" : ""}`,
+            tone: "gold",
+          });
+        }
+      },
+    );
+  }
+  private restoreCapturedRescue() {
+    if (!this.rescue.pending || !this.physics.ball) return;
+    this.physics.launch(0.8);
+    if (this.economy) this.economy.data.launchState = "inflight";
+    this.updateRescue();
+  }
   private classicProtection = new BallProtection();
   protectedRuns: number[] = [];
   get protection(): BallProtection {
@@ -56,23 +107,8 @@ export class GameStateManager {
     const p = this.protection;
     if (this.physics.launched && this.physics.gateClosed && p.enter(this.time))
       this.checkpoint();
-    for (const b of this.physics.balls) {
-      const { x, y } = b.position;
-      if (!this.physics.launched || b.velocity.y <= 0 || y < 715 || y > 742)
-        continue;
-      const side = x < 130 ? "left" : x > 446 && x < 520 ? "right" : undefined;
-      if (!side || !p.kick(side, this.time)) continue;
-      Matter.Body.setVelocity(b, { x: side === "left" ? 2.4 : -2.4, y: -10 });
-      this.physics.limitSpeed(b);
-      this.traceBall(`${side}-kickback`);
-      this.events.emit("ballProtection", { kind: "kickback", x, y });
-      this.events.emit("message", {
-        text: "KICKBACK! · 도랑 복귀",
-        tone: "gold",
-      });
-      this.checkpoint();
-    }
   }
+
   tryBallSave() {
     if (
       this.physics.balls.length !== 1 ||
@@ -234,9 +270,13 @@ export class GameStateManager {
       lastCheckpoint: this.lastCheckpoint,
       respawnAt: this.respawnAt,
       classicProtection: this.classicProtection,
+      classicRescue: this.classicRescue,
+      rescueController: this.rescueController,
       protectedRuns: this.protectedRuns,
     };
     this.physics = new PinballPhysics();
+    this.rescueController = new RescueCannon();
+    this.classicRescue = freshRescue("exercise", 0);
     this.sessionExtension = undefined;
     this.economy = undefined;
     this.army = undefined;
@@ -267,6 +307,7 @@ export class GameStateManager {
     this.war = new WarManager(data, storage);
     this.economy = this.war.player;
     void this.protection;
+    void this.rescue;
     this.protectedRuns = [];
     this.army = this.war.army;
     this.builder = this.war.builder;
@@ -323,6 +364,7 @@ export class GameStateManager {
       this.physics.spawn();
       this.setState("playing");
     }
+    this.restoreCapturedRescue();
     this.checkpoint();
     return true;
   }
@@ -357,6 +399,9 @@ export class GameStateManager {
     this.tilt.reset();
     this.recovery.reset();
     this.remaining = PHYSICS.spheres;
+    this.classicRescue = freshRescue(
+      `classic-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     this.classicProtection = new BallProtection(
       freshProtection(this.save.data.settings.presentation.pinballDifficulty),
     );
@@ -371,6 +416,34 @@ export class GameStateManager {
     this.tutorialFlippers.clear();
     this.setState("playing");
     this.events.emit("message", { text: ko.ready });
+    this.checkpoint();
+  }
+  resumeClassic(): boolean {
+    const r = structuredClone(this.save.data.classicRun);
+    if (!r || r.remaining <= 0) return false;
+    this.start(false);
+    this.classicRescue = r.rescue;
+    this.time = r.time;
+    this.remaining = r.remaining;
+    this.score.score = r.score;
+    this.score.hits = r.hits;
+    this.score.combo.max = r.maxCombo;
+    if (r.protection) this.classicProtection = new BallProtection(r.protection);
+    if (r.inflight && !r.rescue.pending) this.remaining--;
+    this.restoreCapturedRescue();
+    if (this.remaining <= 0) this.setState("over");
+    this.checkpoint();
+    return true;
+  }
+  restartClassic() {
+    const rescue = structuredClone(this.rescue);
+    this.start(false);
+    rescue.pending = undefined;
+    rescue.phase = "IN_PLAY";
+    rescue.ballId = null;
+    rescue.lastFire = 0;
+    this.classicRescue = rescue;
+    this.checkpoint();
   }
   startKingdom(fresh: boolean): void {
     this.sandboxExit?.();
@@ -393,6 +466,7 @@ export class GameStateManager {
       ? new EconomyManager(saved, this.economySave)
       : EconomyManager.create(this.economySave);
     void this.protection;
+    void this.rescue;
     this.protectedRuns = [];
     this.economy.onNotice = (text) =>
       this.events.emit("message", { text, tone: "gold" });
@@ -437,6 +511,8 @@ export class GameStateManager {
       this.physics.spawn();
       this.setState("playing");
     }
+    this.restoreCapturedRescue();
+    this.checkpoint();
   }
   relaunch(): boolean {
     if (this.state !== "relaunch" || !this.economy?.payRelaunch()) return false;
@@ -474,6 +550,24 @@ export class GameStateManager {
   }
   checkpoint(): void {
     if (this.saveConflict) return;
+    if (
+      this.mode === "classic" &&
+      this.state !== "menu" &&
+      !this.practice &&
+      !this.sandboxKind
+    ) {
+      this.save.data.classicRun = {
+        rescue: structuredClone(this.classicRescue),
+        protection: structuredClone(this.protection.data),
+        remaining: this.remaining,
+        score: this.score.score,
+        hits: this.score.hits,
+        maxCombo: this.score.combo.max,
+        time: this.time,
+        inflight: this.physics.launched,
+      };
+      this.save.persist();
+    }
     this.syncEconomy();
     if (this.war) {
       this.war.data.time = this.time;
@@ -778,6 +872,7 @@ export class GameStateManager {
     this.checkpoint();
   }
   menu(): void {
+    this.checkpoint();
     this.sandboxExit?.();
     if (this.sessionExtension) {
       this.checkpoint();
@@ -869,6 +964,7 @@ export class GameStateManager {
       this.state !== "playing" ||
       !this.physics.launched ||
       !this.physics.ball ||
+      this.physics.heldBalls.has(this.physics.ball.id) ||
       !this.tilt.nudge(this.time)
     )
       return;
@@ -941,10 +1037,12 @@ export class GameStateManager {
         ball,
         position: { ...ball.position },
       }));
+      this.updateRescue();
       this.sessionExtension?.beforeStep(dt);
       this.physics.step(dt, !this.tilt.tilted);
       this.physics.telemetry.enabled =
         this.save.data.settings.presentation.debug;
+      this.updateRescue();
       this.updateProtection();
       this.magic?.balls?.recover(dt, this.time);
       const recovered = this.recovery.update(this.physics, dt, this.time);
@@ -967,7 +1065,12 @@ export class GameStateManager {
         });
       }
       for (const item of beforeBalls) {
-        if (!this.physics.balls.includes(item.ball)) continue;
+        if (
+          !this.physics.balls.includes(item.ball) ||
+          this.physics.heldBalls.has(item.ball.id) ||
+          this.rescue.ballId === item.ball.id
+        )
+          continue;
         if (this.magic) this.magic.contactBall = item.ball;
         this.army?.combat.sphere(
           item.position,
@@ -987,7 +1090,11 @@ export class GameStateManager {
       else this.army?.tick(dt, this.time);
       this.sessionExtension?.afterStep(dt);
       if (this.state !== "playing") break;
-      if (this.physics.ball && this.physics.ball.position.y > PHYSICS.drainY)
+      if (
+        this.physics.ball &&
+        !this.physics.heldBalls.has(this.physics.ball.id) &&
+        this.physics.ball.position.y > PHYSICS.drainY
+      )
         this.drain();
       if (
         !this.physics.ball &&
@@ -1016,7 +1123,7 @@ export class GameStateManager {
           } else this.drain("missing");
         }
       } else this.missingSince = 0;
-      if (this.economy && this.time - this.lastCheckpoint >= 5000) {
+      if (this.time - this.lastCheckpoint >= 5000) {
         this.lastCheckpoint = this.time;
         this.checkpoint();
       }
@@ -1148,6 +1255,7 @@ export class GameStateManager {
     this.score.combo.reset();
     this.clearInputs();
     this.events.emit("drain", { remaining: this.remaining });
+    this.checkpoint();
     if (this.remaining <= 0) {
       this.finishRecord();
       this.war = undefined;

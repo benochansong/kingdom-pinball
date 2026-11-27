@@ -1,3 +1,4 @@
+import { RESCUE } from "../config/rescue";
 import { WorldPresentation } from "../presentation/WorldPresentation";
 import { cosmeticColor } from "../config/profile";
 import { ModeRenderer } from "../modes/ModeRenderer";
@@ -267,6 +268,29 @@ export class PinballScene extends Phaser.Scene {
       }
       for (const c of telemetry.contacts) {
         g.strokeCircle(c.x, c.y, 4);
+      }
+    }
+    if (this.model.physics.preset === "standard") {
+      const d = this.model.rescue;
+      for (const side of ["left", "right"] as const) {
+        const c = RESCUE.cannons[side];
+        const active = d.side === side && d.phase !== "IN_PLAY";
+        g.lineStyle(
+          12,
+          d.used >= d.total ? 0x182c29 : 0xdab65c,
+          d.used >= d.total ? 0.8 : 0.4,
+        );
+        g.lineBetween(c.x, c.y, c.exit.x, c.exit.y);
+        if (active) {
+          g.lineStyle(
+            3,
+            0xffe9a1,
+            this.model.save.data.settings.presentation.reduceFlash
+              ? 0.35
+              : 0.75,
+          );
+          g.strokeCircle(c.x, c.y, 24 + Math.sin(this.visualTime * 15) * 3);
+        }
       }
     }
     // Subtle flames, flags, and crystal halo remain independent of gameplay bodies.

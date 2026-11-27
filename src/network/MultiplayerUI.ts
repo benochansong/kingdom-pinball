@@ -10,7 +10,8 @@ import {
 } from "./protocol";
 import { ONLINE_TARGETS } from "./table";
 import { RAILS } from "../data/table";
-import { drawOutlaneGuards } from "../scenes/TableArt";
+import { drawRescueCannons } from "../scenes/TableArt";
+import { RESCUE } from "../config/rescue";
 import { BUILDINGS, buildingConfig } from "../config/buildings";
 import { UNITS, FORMATIONS } from "../config/army";
 import { ELEMENTS, SPELLS } from "../config/magic";
@@ -170,8 +171,7 @@ export class MultiplayerUI {
   private connect() {
     if (this.client?.connected) return;
     const configured = import.meta.env.VITE_GAME_SERVER_URL as
-      | string
-      | undefined;
+      string | undefined;
     const url =
       configured ||
       (import.meta.env.DEV ? `ws://${location.hostname}:8787/ws` : "");
@@ -216,6 +216,29 @@ export class MultiplayerUI {
       el.innerHTML = `<strong>참가 코드 <code>${esc(m.room.code)}</code></strong><span>${esc(m.room.state)} · 준비 ${m.room.rules.preparation}초</span><div>${m.room.players.map((p) => `<span>${esc(p.name)} · ${p.connected ? "연결됨" : "재접속 대기"} · ${p.ready ? "READY" : "준비 중"}</span>`).join("")}</div><button data-online="ready" ${m.room.state === "RUNNING" || m.room.state === "FINISHED" ? "disabled" : ""}>준비 완료</button><button data-online="leave">방 나가기</button>`;
     }
     if (m.type === "snapshot") {
+      const previous = this.snapshot?.self.rescue,
+        current = m.self.rescue;
+      if (
+        previous &&
+        current?.side &&
+        current.sessionId === previous.sessionId &&
+        (current.phase !== previous.phase ||
+          current.sequence !== previous.sequence) &&
+        current.phase !== "IN_PLAY"
+      ) {
+        const c = RESCUE.cannons[current.side];
+        this.game.events.emit("rescue", {
+          phase: current.phase,
+          side: current.side,
+          x: c.exit.x,
+          y: c.exit.y,
+          remaining: current.total - current.used,
+        });
+        if (current.sequence > previous.sequence)
+          this.notice(
+            `RESCUE SHOT! · ${current.total - current.used} / ${current.total}${current.used === current.total ? " · NO RESCUE SHOTS LEFT" : ""}`,
+          );
+      }
       this.snapshot = m;
       this.buffer.push(m);
       this.root.querySelector<HTMLElement>("[data-lobby]")!.hidden = true;
@@ -602,7 +625,13 @@ export class MultiplayerUI {
             : "EXPIRED";
       const el = this.root.querySelector<HTMLElement>("[data-charge]");
       if (el)
-        el.textContent += ` · NORMAL BALL SAVE ${status} / ${protection.remaining}회 · L ${protection.left ? "KICKBACK READY" : protection.leftHits} / R ${protection.right ? "KICKBACK READY" : protection.rightHits}`;
+        el.textContent += ` · NORMAL BALL SAVE ${status} / ${protection.remaining}회`;
+    }
+    const rescue = s.self.rescue;
+    if (rescue) {
+      const el = this.root.querySelector<HTMLElement>("[data-charge]");
+      if (el)
+        el.textContent += ` · ROYAL RESCUE ${rescue.total - rescue.used} / ${rescue.total} · ${rescue.phase === "IN_PLAY" ? "왕실 구조" : "구조 진행 중"}`;
     }
     const producer =
         this.root.querySelector<HTMLSelectElement>("[data-producer]")!,
@@ -713,7 +742,7 @@ export class MultiplayerUI {
         c.lineTo(rail.b[0] + Math.cos(a) * 4, rail.b[1] + Math.sin(a) * 4);
         c.stroke();
       }
-      drawOutlaneGuards(c);
+      drawRescueCannons(c, other ? s.opponent.rescue : s.self.rescue);
       c.font = "13px Georgia";
       c.textAlign = "center";
       for (const t of ONLINE_TARGETS) {

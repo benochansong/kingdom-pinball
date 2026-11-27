@@ -21,6 +21,13 @@ export interface GameEvents {
   royal: { x: number; y: number; points: number };
   drain: { remaining: number };
   launch: { power: number };
+  rescue: {
+    phase: import("../systems/RescueCannon").RescuePhase;
+    side: import("../config/rescue").CannonSide;
+    x: number;
+    y: number;
+    remaining: number;
+  };
   ballProtection: { kind: "save" | "kickback"; x: number; y: number };
   flipper: { side: "left" | "right" };
   impact: { x: number; y: number; speed: number };

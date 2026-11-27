@@ -1,19 +1,49 @@
 import { RAILS, TARGETS, type TargetDefinition } from "../data/table";
-import { OUTLANE_GUARDS } from "../config/pinball";
-
-export function drawOutlaneGuards(c: CanvasRenderingContext2D) {
-  for (const p of OUTLANE_GUARDS) {
-    c.beginPath();
-    c.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-    c.fillStyle = "#c3a665";
-    c.fill();
+import { RESCUE } from "../config/rescue";
+import type { RescueData } from "../systems/RescueCannon";
+export function drawRescueCannons(
+  c: CanvasRenderingContext2D,
+  data?: RescueData,
+) {
+  for (const side of ["left", "right"] as const) {
+    const p = RESCUE.cannons[side],
+      ready = !data || data.used < data.total,
+      active = data?.side === side && !!data.pending;
+    c.save();
+    c.translate(p.x, p.y);
+    c.rotate(Math.atan2(p.direction.y, p.direction.x));
+    const length = Math.hypot(p.exit.x - p.x, p.exit.y - p.y);
+    c.fillStyle = "#503d29";
+    c.strokeStyle = "#b69b60";
     c.lineWidth = 2;
-    c.strokeStyle = "#f6e2a4";
-    c.stroke();
+    c.fillRect(-18, -19, 38, 38);
+    c.strokeRect(-18, -19, 38, 38);
+    c.fillStyle = ready ? "#bd9650" : "#625b48";
+    c.fillRect(0, -9, length, 18);
+    c.strokeRect(0, -9, length, 18);
+    c.fillStyle = "#142a29";
+    c.fillRect(length - 6, -11, 8, 22);
+    c.strokeStyle = active ? "#fff4bc" : ready ? "#f1cf73" : "#777364";
+    c.lineWidth = 3;
     c.beginPath();
-    c.arc(p.x, p.y, p.radius - 4, 0, Math.PI * 2);
-    c.fillStyle = "#254b42";
+    c.moveTo(18, 0);
+    c.lineTo(length - 16, 0);
+    c.moveTo(length - 26, -5);
+    c.lineTo(length - 16, 0);
+    c.lineTo(length - 26, 5);
+    c.stroke();
+    c.fillStyle = active ? "#fff3a2" : ready ? "#dfbb55" : "#504e40";
+    c.beginPath();
+    c.moveTo(-12, -7);
+    c.lineTo(-5, -2);
+    c.lineTo(0, -10);
+    c.lineTo(5, -2);
+    c.lineTo(12, -7);
+    c.lineTo(9, 9);
+    c.lineTo(-9, 9);
+    c.closePath();
     c.fill();
+    c.restore();
   }
 }
 
@@ -542,7 +572,7 @@ export function createTableArt(
       c.restore();
     }
   }
-  if (guards) drawOutlaneGuards(c);
+  if (guards) drawRescueCannons(c);
   // Brass-lined, carved slingshots.
   for (const mirrored of [false, true]) {
     c.save();

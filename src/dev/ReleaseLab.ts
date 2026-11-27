@@ -18,7 +18,7 @@ export function mountReleaseLab(
     .querySelector("details")!
     .insertAdjacentHTML(
       "beforeend",
-      '<button data-release="launch25">실제 25% 발사 · 4초 진행</button><button data-release="step">1초 진행</button><button data-release="restore">왕국 저장 복원</button>',
+      '<button data-release="launch25">실제 25% 발사 · 4초 진행</button><button data-release="step">1초 진행</button><button data-release="restore">왕국 저장 복원</button><button data-release="rescue-left">좌측 구조 포착</button><button data-release="rescue-right">우측 구조 포착</button><button data-release="rescue-step">구조 0.5초 진행</button><button data-release="rescue-play">구조 후 플레이</button>',
     );
   panel.style.cssText =
     "position:fixed;bottom:0;left:0;z-index:10000;background:#10251e;color:#fff;max-width:95vw;font-size:12px;max-height:45vh;overflow:auto";
@@ -37,6 +37,31 @@ export function mountReleaseLab(
         if (action === "kingdom") g.startKingdom(true);
         if (action === "war") g.startWar({ preparation: 180 });
         if (action === "sandbox") modes.start("sandbox", defaultModeOptions());
+      }
+      if (action.startsWith("rescue-")) {
+        if (action === "rescue-left" || action === "rescue-right") {
+          if (g.state === "paused") g.resume();
+          if (!g.physics.launched) {
+            g.chargeStart();
+            g.charge = 0.8;
+            g.chargeRelease();
+          }
+          const b = g.physics.ball!;
+          Matter.Body.setPosition(b, { x: 288, y: 600 });
+          g.time += 2500;
+          g.updateRescue();
+          const left = action === "rescue-left";
+          Matter.Body.setPosition(b, { x: left ? 110 : 466, y: 775 });
+          Matter.Body.setVelocity(b, { x: left ? -1 : 1, y: 6 });
+          g.updateRescue();
+          g.pause();
+        } else {
+          g.resume();
+          if (action === "rescue-step") {
+            for (let i = 0; i < 120; i++) g.update(1000 / 240);
+            g.pause();
+          }
+        }
       }
       if (action === "drain")
         for (const b of g.physics.balls)
@@ -67,6 +92,10 @@ export function mountReleaseLab(
         energy: g.economy?.data.resources.energy,
         losses: g.economy?.data.losses,
         gameMs: g.time,
+        rescue: g.rescue,
+        position: g.physics.ball?.position,
+        velocity: g.physics.ball?.velocity,
+        held: [...g.physics.heldBalls],
         protection: g.protection.data,
         statistics: g.physics.telemetry.summary(),
         bodies: Matter.Composite.allBodies(g.physics.engine.world).length,

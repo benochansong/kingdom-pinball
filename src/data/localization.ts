@@ -1,6 +1,7 @@
 export type Language = "bilingual" | "ko" | "en";
 /** Shared display catalogue. Missing legacy prose deliberately remains readable Korean. */
 export const MENU_LABELS: Record<string, [string, string]> = {
+  "classic-continue": ["클래식 이어하기", "CONTINUE CLASSIC"],
   "campaign:slots": ["캠페인 계속", "CONTINUE CAMPAIGN"],
   "campaign:new": ["새 캠페인", "NEW CAMPAIGN"],
   "war:setup": ["왕국 전쟁", "KINGDOM WAR"],

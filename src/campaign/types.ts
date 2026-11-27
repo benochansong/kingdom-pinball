@@ -112,6 +112,7 @@ export interface CampaignProfile {
 }
 export interface SessionExtension {
   ballProtection?: boolean;
+  rescueEnabled?: boolean;
   flatBoard?: boolean;
   canAdvance?(): boolean;
   regionId?: string;

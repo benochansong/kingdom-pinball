@@ -17,10 +17,10 @@ export class BallRecoverySystem {
     physics: PinballPhysics,
     dt: number,
     now: number,
-    sphere=physics.ball,
+    sphere = physics.ball,
   ): "impulse" | "return" | undefined {
     const ball = sphere;
-    if (!ball || !physics.launched) {
+    if (!ball || !physics.launched || physics.heldBalls.has(ball.id)) {
       this.stillFor = 0;
       return;
     }

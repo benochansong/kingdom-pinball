@@ -907,6 +907,7 @@ export class MagicManager {
         if (t) this.deal(t, s.power * s.stacks * 0.5, "fire", true);
       }
     for (const ball of this.game.physics.balls) {
+      if (this.game.physics.heldBalls.has(ball.id)) continue;
       if (
         this.balls?.state(ball)?.type !== "healing" ||
         this.protected ||
@@ -946,6 +947,7 @@ export class MagicManager {
       }
     this.enemyAI();
     for (const b of this.game.physics.balls) {
+      if (this.game.physics.heldBalls.has(b.id)) continue;
       if (
         this.balls?.state(b)?.type !== "healing" ||
         !this.game.physics.launched ||

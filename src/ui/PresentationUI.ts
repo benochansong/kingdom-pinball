@@ -63,7 +63,7 @@ export class PresentationUI {
       .querySelector(".table-section")!
       .insertAdjacentHTML(
         "afterbegin",
-        '<div id="focus-objective" role="status"></div><div id="ball-protection" role="status"></div>',
+        '<div id="focus-objective" role="status"></div><div id="ball-protection" role="status"></div><div id="royal-rescue" role="status" aria-label="왕실 구조 남은 횟수"></div>',
       );
     ui.root
       .querySelectorAll<HTMLElement>(
@@ -217,7 +217,22 @@ export class PresentationUI {
     protectionHud.textContent =
       g.sessionExtension?.ballProtection === false
         ? "도전 규칙 · 추가 핀볼 보호 없음"
-        : `${d.difficulty.toUpperCase()} · ${saveText} · 무료 ${d.remaining}회 · L ${d.left ? "KICKBACK READY" : `${d.leftHits} 충전`} / R ${d.right ? "KICKBACK READY" : `${d.rightHits} 충전`}`;
+        : `${d.difficulty.toUpperCase()} · ${saveText} · 무료 ${d.remaining}회`;
+    const rescue = g.rescue,
+      remaining = Math.max(0, rescue.total - rescue.used);
+    const rescueHud = root.querySelector<HTMLElement>("#royal-rescue")!;
+    rescueHud.hidden = g.state === "menu" || g.state === "over";
+    const signature = `${remaining}/${rescue.total}/${rescue.phase}`;
+    if (rescueHud.dataset.state !== signature) {
+      rescueHud.dataset.state = signature;
+      rescueHud.classList.toggle("rescue-active", rescue.phase !== "IN_PLAY");
+      rescueHud.innerHTML = `<strong>ROYAL RESCUE <small>왕실 구조</small></strong><span class="rescue-count">${remaining} / ${rescue.total}</span><span class="rescue-shots" aria-hidden="true">${Array.from({ length: rescue.total }, (_, i) => `<span class="rescue-shot ${i < remaining ? "ready" : "spent"}">♜</span>`).join("")}</span>`;
+    }
+    const continueClassic = root.querySelector<HTMLButtonElement>(
+      '[data-action="classic-continue"]',
+    );
+    if (continueClassic)
+      continueClassic.disabled = !g.save.data.classicRun?.remaining;
     const ballObjective: Record<string, string> = {
       ready: "공 발사 준비 완료 · Space를 눌렀다가 놓으세요.",
       charging: "Space를 놓아 공을 발사하세요.",
@@ -277,6 +292,7 @@ export class PresentationUI {
           launcher: g.economy?.data.launchState,
           difficulty: d.difficulty,
           protection: d,
+          rescue: g.rescue,
           pinball: g.physics.telemetry.summary(),
           protectedRunSeconds: g.protectedRuns,
           produced: g.economy?.data.produced,
