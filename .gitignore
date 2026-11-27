@@ -6,7 +6,7 @@ dist/
 coverage/
 *.local
 test-results/
-data/
+/data/
 dist-server/
 *.sqlite
 *.sqlite-shm

@@ -1,4 +1,4 @@
-import { resourceSVG } from './IconRegistry';
+import { resourceSVG } from "./IconRegistry";
 import {
   ECONOMY,
   ECONOMY_TUTORIAL,
@@ -96,11 +96,14 @@ export class EconomyUI {
       );
     ui.onAction = (action) => this.action(action);
     ui.onRender = () => this.render();
-    ui.onRelaunchClose = () => this.relaunchPanel();
+    ui.onRelaunchClose = () => {
+      if (this.game.ballStatus === "recovery-required") this.relaunchPanel();
+    };
     this.disposers = [
       game.events.on("state", ({ state }) => {
         if (game.mode === "kingdom" && !game.war) {
-          if (state === "relaunch") this.relaunchPanel();
+          if (state === "relaunch" && game.economy!.data.resources.energy < 20)
+            this.relaunchPanel();
           if (state === "over") this.result();
         }
         if (state === "playing" && game.time === 0) this.log = [];
@@ -273,11 +276,13 @@ export class EconomyUI {
         return true;
       case "recover-gold":
         e.recoverEnergy("gold");
-        this.relaunchPanel();
+        if (this.game.relaunch()) this.ui.close(false);
+        else this.relaunchPanel();
         return true;
       case "recover-mana":
         e.recoverEnergy("mana");
-        this.relaunchPanel();
+        if (this.game.relaunch()) this.ui.close(false);
+        else this.relaunchPanel();
         return true;
       case "end-kingdom":
         this.ui.close(false);
@@ -530,7 +535,7 @@ export class EconomyUI {
       this.ui.root.querySelector("#economy-left")!.innerHTML =
         `<div class="eyebrow">YOUR GROWING KINGDOM</div><h2 class="rank-title">${RANK_NAMES[d.rank - 1]}</h2><div class="rank-english">LEVEL ${d.rank} · ${RANKS[d.rank - 1]}</div><p class="tiny">${d.rank < 5 ? `다음 등급: ${next[d.rank - 1]}` : "왕국의 최고 발전 등급입니다."}</p><div class="section-heading">이번 원정의 목표 <button class="text-button" data-action="objectives">전체</button></div><div class="mini-objectives">${objectives.map((o) => `<button data-action="objectives"><span>${o.name}</span><small>${format(Math.min(o.target, o.progress(d)))} / ${format(o.target)}</small><progress max="${o.target}" value="${Math.min(o.target, o.progress(d))}"></progress></button>`).join("") || "<p>모든 경제 목표를 완료했습니다.</p>"}</div><div class="section-heading">왕국의 생산시설</div><div class="mini-facilities">${FACILITIES.map((f) => `<button data-action="production">${resourceIcon(f.resource)}<span>${f.name}<small>${statusNames[e.status(f.id)]}</small></span><b>Lv.${d.facilities[f.id].level}</b></button>`).join("")}</div><div class="active-event"><b>${event ? event.name : "다음 생산 이벤트"}</b><p>${event ? `${event.hint}<br>${Math.ceil((d.event!.until - d.time) / 1000)}초 남음` : `유효 생산 타격 ${Math.max(0, ECONOMY.eventEveryHits - (d.validHits - d.lastEventHit))}회 후 발생`}</p>${d.royalUntil > d.time ? `<p>ROYAL PROSPERITY +20%<br>${Math.ceil((d.royalUntil - d.time) / 1000)}초 남음</p>` : ""}</div>`;
       this.ui.root.querySelector("#economy-right")!.innerHTML =
-        `<div class="eyebrow">THE ART OF PRODUCTION</div><div class="production-combo"><strong>${d.combo.count}</strong><span>생산 콤보<br><b>×${e.multiplier}</b></span></div><div class="combo-track"><i style="width:${d.combo.count ? Math.max(0, 100 - (d.time - d.combo.last) / 40) : 0}%"></i></div><p class="tiny">생산 콤보는 4초 동안 유지됩니다.</p><div class="section-heading">특수 생산 콤보 <button class="text-button" data-action="specials">보기</button></div>${SPECIALS.map((s) => `<button class="mini-special" data-action="specials"><span>${s.name}</span><b>${d.specials[s.id].count}/${s.goal}</b><progress value="${d.specials[s.id].count}" max="${s.goal}"></progress></button>`).join("")}<div class="section-heading">최근 생산 내역</div><ul class="resource-log">${this.log.map((l) => `<li>${l}</li>`).join("") || "<li>필요한 자원의 시설을 조준하세요.</li>"}</ul><div class="energy-summary">${resourceIcon("energy")} 재발사 가능 <b>${Math.floor(d.resources.energy / 20)}회</b><small>공 손실 후 직접 에너지 20 지불</small></div>`;
+        `<div class="eyebrow">THE ART OF PRODUCTION</div><div class="production-combo"><strong>${d.combo.count}</strong><span>생산 콤보<br><b>×${e.multiplier}</b></span></div><div class="combo-track"><i style="width:${d.combo.count ? Math.max(0, 100 - (d.time - d.combo.last) / 40) : 0}%"></i></div><p class="tiny">생산 콤보는 4초 동안 유지됩니다.</p><div class="section-heading">특수 생산 콤보 <button class="text-button" data-action="specials">보기</button></div>${SPECIALS.map((s) => `<button class="mini-special" data-action="specials"><span>${s.name}</span><b>${d.specials[s.id].count}/${s.goal}</b><progress value="${d.specials[s.id].count}" max="${s.goal}"></progress></button>`).join("")}<div class="section-heading">최근 생산 내역</div><ul class="resource-log">${this.log.map((l) => `<li>${l}</li>`).join("") || "<li>필요한 자원의 시설을 조준하세요.</li>"}</ul><div class="energy-summary">${resourceIcon("energy")} 재발사 가능 <b>${Math.floor(d.resources.energy / 20)}회</b><small>공 손실 후 에너지 20 자동 지불</small></div>`;
     }
     const tutorial = this.ui.root.querySelector<HTMLElement>("#tutorial")!;
     tutorial.hidden = d.tutorialStep < 0 || this.game.state !== "playing";

@@ -10,6 +10,69 @@ const advance = (s: ServerSimulation, seconds: number) => {
   for (let i = 0; i < 30 * seconds; i++) s.step();
 };
 describe("multiplayer rules and hostile input", () => {
+  it("keeps live online multiballs when the primary escapes the table", () => {
+    const s = new ServerSimulation({ ...DEFAULT_RULES });
+    const g = s.games[0];
+    g.physics.launch(0.8);
+    g.economy!.data.launchState = "inflight";
+    const escaped = g.physics.ball!;
+    g.physics.addSphere();
+    g.physics.addSphere();
+    Matter.Body.setPosition(escaped, { x: -100, y: 300 });
+    s.step();
+    expect(g.physics.balls).toHaveLength(2);
+    expect(g.physics.ball).not.toBe(escaped);
+    expect(g.physics.launched).toBe(true);
+    expect(g.economy!.data.launchState).toBe("inflight");
+    expect(g.economy!.data.resources.energy).toBe(100);
+    expect(s.lost[0]).toBe(0);
+    s.dispose();
+  });
+  it.each([false, true])(
+    "respawns both server seats after repeated %s missing-body losses, charging once",
+    (missing) => {
+      const s = new ServerSimulation({ ...DEFAULT_RULES });
+      for (let round = 1; round <= 3; round++) {
+        for (const g of s.games) {
+          g.physics.launch(0.8);
+          g.economy!.data.launchState = "inflight";
+          if (missing) g.physics.removeBall();
+          else Matter.Body.setPosition(g.physics.ball!, { x: 290, y: 890 });
+        }
+        advance(s, 0.1);
+        for (const [seat, g] of s.games.entries()) {
+          expect(g.physics.balls).toHaveLength(0);
+          expect(s.lost[seat]).toBe(round);
+          expect(g.economy!.data.resources.energy).toBe(100 - 20 * (round - 1));
+        }
+        advance(s, 1);
+        for (const g of s.games) {
+          expect(g.physics.balls).toHaveLength(1);
+          expect(g.economy!.data.launchState).toBe("ready");
+          expect(g.economy!.data.resources.energy).toBe(100 - 20 * round);
+        }
+      }
+      s.dispose();
+    },
+  );
+  it("restores an empty-energy server player after one emergency recovery delay", () => {
+    const s = new ServerSimulation({ ...DEFAULT_RULES });
+    const g = s.games[0];
+    g.economy!.data.resources.energy = 0;
+    g.economy!.data.launchState = "inflight";
+    g.physics.launch(0.8);
+    Matter.Body.setPosition(g.physics.ball!, { x: 290, y: 890 });
+    advance(s, 1);
+    expect(g.physics.balls).toHaveLength(0);
+    expect(g.economy!.data.resources.energy).toBe(20);
+    advance(s, 14);
+    expect(g.physics.balls).toHaveLength(0);
+    advance(s, 1);
+    expect(g.physics.balls).toHaveLength(1);
+    expect(g.economy!.data.resources.energy).toBe(0);
+    expect(s.lost[0]).toBe(1);
+    s.dispose();
+  });
   it("allows launching again after the server recovers an escaped ball", () => {
     const s = new ServerSimulation({ ...DEFAULT_RULES });
     const g = s.games[0];

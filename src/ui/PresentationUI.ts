@@ -65,7 +65,11 @@ export class PresentationUI {
         "afterbegin",
         '<div id="focus-objective" role="status"></div>',
       );
-    ui.root.querySelectorAll<HTMLElement>('[data-action="start"], [data-action="campaign:new"]').forEach(el=>el.hidden=false);
+    ui.root
+      .querySelectorAll<HTMLElement>(
+        '[data-action="start"], [data-action="campaign:new"]',
+      )
+      .forEach((el) => (el.hidden = false));
     const note = ui.root.querySelector(".edition-note");
     if (note) note.textContent = "PHASE 09 · FEEL EVERY IMPACT";
     const tagline = ui.root.querySelector(".tagline");
@@ -128,6 +132,12 @@ export class PresentationUI {
         )}<p id="key-feedback" role="status"></p></fieldset></div><button class="primary" data-action="close">설정 완료</button>`,
     );
     this.ui.dialog
+      .querySelector(".settings-tabs")!
+      .insertAdjacentHTML(
+        "afterbegin",
+        `<fieldset><legend>언어</legend><label class="setting">언어<select data-p="language" aria-label="언어"><option value="bilingual" ${p.language === "bilingual" ? "selected" : ""}>한국어 + English</option><option value="ko" ${p.language === "ko" ? "selected" : ""}>한국어</option><option value="en" ${p.language === "en" ? "selected" : ""}>English</option></select></label><p>English: 주요 메뉴·설정·조작 안내 지원. 일부 캠페인 설명과 상세 메시지는 한국어로 표시됩니다.</p></fieldset>`,
+      );
+    this.ui.dialog
       .querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-p]")
       .forEach((input) =>
         input.addEventListener("input", () => {
@@ -146,6 +156,8 @@ export class PresentationUI {
           this.ui.game.save.persist();
           this.ui.audio.sync();
           this.render();
+          if (key === "language")
+            document.dispatchEvent(new Event("kingdom-language"));
         }),
       );
     this.ui.dialog
@@ -185,23 +197,31 @@ export class PresentationUI {
       p.ui === "simple" ? "SIMPLE UI" : "ADVANCED UI",
     );
     const s = this.modes.active ? this.modes.session : null;
-    const objective = s
-      ? s.kind === "puzzle"
-        ? `목표 ${this.modes.puzzle?.board.hits ?? 0} · ${s.name}`
-        : s.status === "reward"
-          ? "보상 1개를 선택하세요."
-          : s.kind === "survival"
-            ? `웨이브 ${s.wave.number} · 왕궁을 지키세요.`
-            : s.name
-      : g.war
-        ? g.war.castle("ally").hp / g.war.castle("ally").maxHp < 0.25
-          ? "왕궁 위기 · 수리와 방어가 필요합니다."
-          : g.war.preparing
-            ? "침공에 대비해 건설·병력을 준비하세요."
-            : "적 성벽을 돌파하고 왕궁을 점령하세요."
-        : g.economy
-          ? "생산시설을 타격해 왕국을 성장시키세요."
-          : "왕궁 5회 타격 · ROYAL BONUS";
+    const ballObjective: Record<string, string> = {
+      ready: "공 발사 준비 완료 · Space를 눌렀다가 놓으세요.",
+      charging: "Space를 놓아 공을 발사하세요.",
+      "respawn-pending": "공 아웃 · 다음 공 준비 중…",
+      "recovery-required": "코어 에너지 부족 · 금화·마력석으로 충전하세요.",
+    };
+    const objective =
+      ballObjective[g.ballStatus] ??
+      (s
+        ? s.kind === "puzzle"
+          ? `목표 ${this.modes.puzzle?.board.hits ?? 0} · ${s.name}`
+          : s.status === "reward"
+            ? "보상 1개를 선택하세요."
+            : s.kind === "survival"
+              ? `웨이브 ${s.wave.number} · 왕궁을 지키세요.`
+              : s.name
+        : g.war
+          ? g.war.castle("ally").hp / g.war.castle("ally").maxHp < 0.25
+            ? "왕궁 위기 · 수리와 방어가 필요합니다."
+            : g.war.preparing
+              ? "침공에 대비해 건설·병력을 준비하세요."
+              : "적 성벽을 돌파하고 왕궁을 점령하세요."
+          : g.economy
+            ? "생산시설을 타격해 왕국을 성장시키세요."
+            : "왕궁 5회 타격 · ROYAL BONUS");
     this.ui.text(
       "focus-objective",
       g.state === "menu"
@@ -212,6 +232,31 @@ export class PresentationUI {
       "charge-label",
       `${p.keys.launch.replace("Key", "")} · CHARGE`,
     );
+    let diagnostic = root.querySelector<HTMLElement>("#ball-diagnostics");
+    if (p.debug && !diagnostic) {
+      diagnostic = document.createElement("pre");
+      diagnostic.id = "ball-diagnostics";
+      diagnostic.setAttribute("aria-label", "공 상태 진단");
+      root.querySelector(".page-footer")!.after(diagnostic);
+    }
+    if (diagnostic) {
+      diagnostic.hidden = !p.debug;
+      if (p.debug)
+        diagnostic.textContent = JSON.stringify({
+          mode: s?.kind ?? (g.war ? "war" : g.mode),
+          state: g.state,
+          gameMs: Math.round(g.time),
+          frameMs: Math.round(g.lastFrameMs * 100) / 100,
+          updates: g.updateCount,
+          ball: g.ballStatus,
+          count: g.physics.balls.length,
+          primary: g.physics.ball?.id,
+          remaining: g.remaining,
+          energy: g.economy?.data.resources.energy,
+          launcher: g.economy?.data.launchState,
+          events: g.ballLog.slice(-4),
+        });
+    }
   }
   dispose() {
     this.abort.abort();

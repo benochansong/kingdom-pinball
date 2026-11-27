@@ -188,7 +188,8 @@ export class AudioManager {
       ),
       bus.on("drain", () => this.tone(280, 0.6, "triangle", 0.18, 70)),
       bus.on("state", ({ state }) => {
-        if (state === "paused" || state === "menu") this.stopVoices();
+        if (state === "paused" || state === "menu" || state === "over")
+          this.stopVoices();
         this.nextNote = 0;
         if (state === "over" && !this.game.war)
           [392, 330, 262, 196].forEach((hz, i) =>
@@ -265,7 +266,8 @@ export class AudioManager {
     if (
       !this.context ||
       this.context.state !== "running" ||
-      this.game.state === "paused"
+      this.game.state === "paused" ||
+      this.game.state === "over"
     )
       return;
     const now = this.context.currentTime;

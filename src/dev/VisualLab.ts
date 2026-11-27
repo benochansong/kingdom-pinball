@@ -12,7 +12,7 @@ export function mountVisualLab(
 ) {
   const bar = document.createElement("aside");
   bar.className = "military-lab";
-  bar.innerHTML = `<b>VISUAL LAB · 격리 저장</b><select aria-label="시각 검사 지역">${REGIONS.map((r) => `<option value="${r.id}">${r.name}</option>`).join("")}</select><button data-case="0">A · 1공</button><button data-case="1">B · 50기</button><button data-case="2">C · 120기</button><button data-case="3">D · 7공</button><button data-case="4">E · STORM 10공</button><button data-case="5">F · 150기+STORM</button><button data-case="6">G · 연속 파괴</button><button data-case="7">H · 생존</button><button data-bench>8종 측정</button><output aria-label="실측 렌더 성능">준비</output><details class="visual-results"><summary>측정 결과</summary><pre aria-label="시각 성능 결과"></pre></details>`;
+  bar.innerHTML = `<b>VISUAL LAB · 격리 저장</b><select aria-label="시각 검사 지역">${REGIONS.map((r) => `<option value="${r.id}">${r.name}</option>`).join("")}</select><button data-case="0">A · 1공</button><button data-case="1">B · 50기</button><button data-case="2">C · 120기</button><button data-case="3">D · 7공</button><button data-case="4">E · STORM 10공</button><button data-case="5">F · 150기+STORM</button><button data-case="6">G · 연속 파괴</button><button data-case="7">H · 생존</button><button data-case="8">I · 3공</button><button data-bench>9종 측정</button><output aria-label="실측 렌더 성능">준비</output><details class="visual-results"><summary>측정 결과</summary><pre aria-label="시각 성능 결과"></pre></details>`;
   document.body.prepend(bar);
   const g = m.game;
   const abort = new AbortController();
@@ -35,8 +35,13 @@ export function mountVisualLab(
     o.sandbox.ai = false;
     m.start(i === 7 ? "survival" : "sandbox", o);
     ui.close(false);
-    g.time=g.war!.data.time=g.war!.player.data.time=g.war!.enemy.data.time=61000;
-    g.war!.army.data.command="attack";g.war!.enemyArmy.data.command="attack";
+    g.time =
+      g.war!.data.time =
+      g.war!.player.data.time =
+      g.war!.enemy.data.time =
+        61000;
+    g.war!.army.data.command = "attack";
+    g.war!.enemyArmy.data.command = "attack";
     g.save.data.settings.presentation.debug = true;
     if (g.state === "paused") g.resume();
     g.chargeStart();
@@ -45,7 +50,7 @@ export function mountVisualLab(
     if (i !== 7) {
       g.war!.army.data.units = [];
       g.war!.enemyArmy.data.units = [];
-      const n = [0, 50, 120, 0, 0, 150, 40][i];
+      const n = [0, 50, 120, 0, 0, 150, 40, 0, 0][i];
       for (let j = 0; j < n; j++)
         m.battle.spawn(
           n >= 120 ? "swordsman" : UNITS[j % 8].id,
@@ -53,6 +58,10 @@ export function mountVisualLab(
           n === 150 ? (j < 90 ? "ally" : "enemy") : j % 2 ? "enemy" : "ally",
           1,
         );
+      if (i === 8) {
+        g.physics.addSphere();
+        g.physics.addSphere();
+      }
       if (i === 4 || i === 5) {
         g.magic!.multiball(true);
       } else if (i === 3) g.magic!.multiball(false);
@@ -113,7 +122,7 @@ export function mountVisualLab(
       p = (q: number) =>
         sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))] ?? 0;
     const result = {
-      case: "ABCDEFGH"[index],
+      case: "ABCDEFGHI"[index],
       region: m.session.options.region,
       frames: frames.length,
       wallMs: now - start,
@@ -133,7 +142,7 @@ export function mountVisualLab(
     bar.querySelector("output")!.textContent =
       `${result.case}: ${result.fps.toFixed(1)} FPS · p95 ${result.p95.toFixed(1)}ms`;
     bar.querySelector("pre")!.textContent = JSON.stringify(results, null, 2);
-    if (auto && index < 7) setup(index + 1);
+    if (auto && index < 8) setup(index + 1);
     else index = -1;
   };
   phaser.events.on("poststep", update);

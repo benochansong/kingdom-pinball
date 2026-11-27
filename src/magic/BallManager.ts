@@ -53,7 +53,7 @@ export class BallManager {
       this.states.get(b.id)!.temporary = b !== this.physics.ball;
   }
   state(b = this.physics.ball) {
-    if(b&&!this.states.has(b.id))this.sync();
+    if (b && !this.states.has(b.id)) this.sync();
     return b ? this.states.get(b.id) : undefined;
   }
   transform(b: Matter.Body, type: Element, until: number) {
@@ -90,6 +90,17 @@ export class BallManager {
     return true;
   }
   end() {
+    // Expiry and a primary drain can occur in the same physics step.
+    // Promote a live sphere before removing temporary ones.
+    if (this.physics.ball && this.physics.ball.position.y > PHYSICS.drainY) {
+      const live = this.physics.balls.find(
+        (b) => b.position.y <= PHYSICS.drainY,
+      );
+      if (live) {
+        for (const b of [...this.physics.balls])
+          if (b !== live) this.physics.removeSphere(b);
+      }
+    }
     const primary = this.physics.ball;
     for (const b of this.physics.balls)
       if (b !== primary) this.physics.removeSphere(b);

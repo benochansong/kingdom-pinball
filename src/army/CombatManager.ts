@@ -495,8 +495,15 @@ export class CombatManager {
       l2 = dx * dx + dy * dy;
     if (l2 < 0.001) return;
     let hits = 0;
+    const minX = Math.min(from.x, to.x) - 18,
+      maxX = Math.max(from.x, to.x) + 18;
+    const minY = Math.min(from.y, to.y) - 18,
+      maxY = Math.max(from.y, to.y) + 18;
     for (const enemy of this.data.battle.enemies) {
       if (enemy.hp <= 0 || now - enemy.lastSphere < 550) continue;
+      // Exact broad phase; preserve enemy order and the two-hit cap.
+      if (enemy.x < minX || enemy.x > maxX || enemy.y < minY || enemy.y > maxY)
+        continue;
       const t = Math.max(
         0,
         Math.min(1, ((enemy.x - from.x) * dx + (enemy.y - from.y) * dy) / l2),

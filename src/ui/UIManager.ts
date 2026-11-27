@@ -73,7 +73,7 @@ export class UIManager {
     this.disposers = [
       game.events.on("state", ({ state }) => {
         this.root.querySelector<HTMLElement>(".game-layout")!.dataset.state =
-          game.war && state === "relaunch" ? "playing" : state;
+          state === "relaunch" ? "playing" : state;
         if (state === "over" && game.mode === "classic") this.showGameOver();
         if (state === "playing" && game.time === 0) {
           this.logs = [];
@@ -190,28 +190,26 @@ export class UIManager {
         break;
     }
   }
+  private get waitingToRespawn(): boolean {
+    return (
+      this.game.state === "relaunch" &&
+      (!!this.game.war || this.game.ballStatus === "respawn-pending")
+    );
+  }
   pause(): void {
     if (this.game.state === "paused") {
       this.close();
       this.game.resume();
       return;
     }
-    if (
-      this.game.state !== "playing" &&
-      !(this.game.war && this.game.state === "relaunch")
-    )
-      return;
+    if (this.game.state !== "playing" && !this.waitingToRespawn) return;
     this.open(
       ko.paused,
       '<p>왕국은 당신을 기다립니다.<br>스피어와 콤보 시간은 그대로 멈춰 있습니다.</p><div class="pause-menu"><button class="primary" data-action="resume">원정 계속하기</button><button data-action="settings">설정</button><button data-action="restart">다시 시작</button><button data-action="home">메인 메뉴</button></div>',
     );
   }
   autoPause(): void {
-    if (
-      this.game.state === "playing" ||
-      (this.game.war && this.game.state === "relaunch")
-    )
-      this.pause();
+    if (this.game.state === "playing" || this.waitingToRespawn) this.pause();
     this.game.clearInputs();
   }
   confirmRestart(): void {
@@ -226,16 +224,11 @@ export class UIManager {
   open(title: string, body: string, resumeOnClose?: boolean): void {
     this.dialog.classList.remove("wide");
     if (!this.dialog.open) {
-      this.wasPlaying =
-        this.game.state === "playing" ||
-        (!!this.game.war && this.game.state === "relaunch");
+      this.wasPlaying = this.game.state === "playing" || this.waitingToRespawn;
       this.lastFocus = document.activeElement as HTMLElement;
     }
     if (resumeOnClose !== undefined) this.wasPlaying = resumeOnClose;
-    if (
-      this.game.state === "playing" ||
-      (this.game.war && this.game.state === "relaunch")
-    )
+    if (this.game.state === "playing" || this.waitingToRespawn)
       this.game.pause();
     this.dialog.querySelector(".dialog-inner")!.innerHTML =
       `<div class="dialog-eyebrow">THE ROYAL CHAMBER</div><button class="dialog-close" data-action="close" aria-label="닫기">×</button><h2 id="dialog-title">${title}</h2>${body}`;

@@ -143,6 +143,7 @@ export interface Snapshot {
     hits: number;
     score: number;
     energyWait: number;
+    launched?: boolean;
   };
   opponent: { balls: BallView[]; flippers: number[] };
   battlefield: {

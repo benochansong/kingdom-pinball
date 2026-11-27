@@ -1,4 +1,6 @@
 import { mountVisualLab } from "./dev/VisualLab";
+import { mountReleaseLab } from "./dev/ReleaseLab";
+import { ReleaseUI } from "./ui/ReleaseUI";
 import { MultiplayerUI } from "./network/MultiplayerUI";
 import { ModeSaveManager } from "./modes/ModeSaveManager";
 import { PresentationUI } from "./ui/PresentationUI";
@@ -25,6 +27,7 @@ import "./building.css";
 import "./army.css";
 import "./war.css";
 import "./presentation.css";
+import "./release.css";
 import { WarUI } from "./ui/WarUI";
 import { WAR_KEY } from "./war/WarSaveManager";
 import { ArmyUI } from "./ui/ArmyUI";
@@ -49,15 +52,19 @@ const campaignLab =
 const visualLab =
   import.meta.env.DEV &&
   new URLSearchParams(location.search).get("visual-lab") === "1";
-const model = visualLab
-  ? createCampaignLab()
-  : campaignLab
+const releaseLab =
+  import.meta.env.DEV &&
+  new URLSearchParams(location.search).get("release-lab") === "1";
+const model =
+  visualLab || releaseLab
     ? createCampaignLab()
-    : warLab
-      ? createWarLab()
-      : lab
-        ? createLabModel()
-        : new GameStateManager();
+    : campaignLab
+      ? createCampaignLab()
+      : warLab
+        ? createWarLab()
+        : lab
+          ? createLabModel()
+          : new GameStateManager();
 const audio = new AudioManager(model);
 const ui = new UIManager(model, audio);
 const economyUI = new EconomyUI(ui, model);
@@ -67,12 +74,12 @@ const warUI = new WarUI(ui, model);
 const magicUI = new MagicUI(ui, model);
 const campaign = new CampaignManager(
   model,
-  campaignLab ? createCampaignLabSave() : undefined,
+  campaignLab || releaseLab || visualLab ? createCampaignLabSave() : undefined,
 );
 const campaignUI = new CampaignUI(ui, campaign);
 const modes = new GameModeManager(
   model,
-  visualLab
+  visualLab || releaseLab
     ? new ModeSaveManager({
         getItem: (k) => sessionStorage.getItem("visual-lab:" + k),
         setItem: (k, v) => sessionStorage.setItem("visual-lab:" + k, v),
@@ -83,6 +90,10 @@ const modeUI = new ModeUI(ui, modes);
 const creatorUI = new TableCreatorUI(ui, modes);
 const presentationUI = new PresentationUI(ui, modes);
 const multiplayerUI = new MultiplayerUI(model, modes);
+const releaseUI = new ReleaseUI(ui);
+const disposeReleaseLab = releaseLab
+  ? mountReleaseLab(model, ui, modes)
+  : undefined;
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -294,11 +305,13 @@ if (import.meta.hot)
     modeUI.dispose();
     creatorUI.dispose();
     presentationUI.dispose();
+    releaseUI.dispose();
     multiplayerUI.dispose();
     magicUI.dispose();
     warUI.dispose();
     disposeLab?.();
     disposeVisualLab?.();
+    disposeReleaseLab?.();
     ui.dispose();
     audio.dispose();
     model.dispose();

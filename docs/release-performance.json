@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-27",
+  "environment": "Local in-app Chromium, DEV VisualLab, 1280x720, default high/auto quality, document.hidden=false throughout; sequential 8s samples. No simultaneous test/build workload. Not a sustained FPS guarantee or controlled comparison against Phase 9.",
+  "measurement": "Phaser poststep wall-clock frame intervals; no browser evaluate access to game internals. Results read from rendered DEV results panel.",
+  "samples": [
+    {"case":"A","scenario":"1 ball","frames":1113,"wallMs":8001.6,"fps":139.10,"p50":6.4,"p95":10.8,"p99":15.7,"peakBalls":1,"peakUnits":0,"bodies":46,"destroyed":0},
+    {"case":"B","scenario":"50 units","frames":932,"wallMs":8004.7,"fps":116.43,"p50":7.9,"p95":12.7,"p99":17.2,"peakBalls":1,"peakUnits":50,"bodies":46,"destroyed":0},
+    {"case":"C","scenario":"120 units","frames":794,"wallMs":8006.3,"fps":99.17,"p50":9.3,"p95":15.1,"p99":20.9,"peakBalls":1,"peakUnits":120,"bodies":46,"destroyed":0},
+    {"case":"D","scenario":"7 balls","frames":678,"wallMs":8002,"fps":84.73,"p50":11.4,"p95":18.5,"p99":24,"peakBalls":7,"peakUnits":0,"bodies":52,"destroyed":0},
+    {"case":"E","scenario":"STORM 10 balls","frames":470,"wallMs":8006.1,"fps":58.71,"p50":16.4,"p95":24.2,"p99":28.3,"peakBalls":10,"peakUnits":0,"bodies":55,"destroyed":0},
+    {"case":"F","scenario":"150 units and STORM","frames":232,"wallMs":8002.8,"fps":28.99,"p50":33.2,"p95":56.8,"p99":74.7,"peakBalls":10,"peakUnits":150,"bodies":55,"destroyed":0},
+    {"case":"G","scenario":"consecutive destruction","frames":969,"wallMs":8000.8,"fps":121.11,"p50":7,"p95":12.8,"p99":40.3,"peakBalls":1,"peakUnits":40,"bodies":35,"destroyed":11},
+    {"case":"H","scenario":"survival","frames":999,"wallMs":8006.4,"fps":124.78,"p50":7.2,"p95":12.3,"p99":15.3,"peakBalls":1,"peakUnits":8,"bodies":44,"destroyed":0},
+    {"case":"I","scenario":"3 balls, 2 remaining at sample end","frames":860,"wallMs":8006.9,"fps":107.41,"p50":9.1,"p95":14.6,"p99":20.7,"peakBalls":3,"peakUnits":0,"bodies":47,"destroyed":0}
+  ],
+  "limits": ["CPU/GPU and other system activity were not controlled between phases", "Auto-quality can change decoration budget across samples", "150 units + STORM remains below 60 FPS", "No wall-clock 30-minute render/memory soak or OS display-scale matrix"]
+}

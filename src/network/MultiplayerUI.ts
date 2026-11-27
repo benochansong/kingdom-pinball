@@ -421,9 +421,11 @@ export class MultiplayerUI {
         });
         break;
       case "surrender":
-        this.notice(this.room?.rules.mode === "duel"
-          ? "항복하면 상대 승리로 확정됩니다. 다시 눌러 확인하세요."
-          : "항복하면 팀 패배로 확정됩니다. 다시 눌러 확인하세요.");
+        this.notice(
+          this.room?.rules.mode === "duel"
+            ? "항복하면 상대 승리로 확정됩니다. 다시 눌러 확인하세요."
+            : "항복하면 팀 패배로 확정됩니다. 다시 눌러 확인하세요.",
+        );
         button.dataset.online = "confirmSurrender";
         button.textContent = "항복 확정";
         break;
@@ -574,7 +576,9 @@ export class MultiplayerUI {
         ? `발사 충전 ${Math.round(s.self.charge * 100)}%`
         : s.self.energyWait
           ? "재발사 대기 중"
-          : "Space를 눌러 충전 · 놓아서 발사",
+          : s.self.launched
+            ? "공 진행 중 · 플리퍼로 목표물을 조준하세요."
+            : "Space를 눌러 충전 · 놓아서 발사",
     );
     this.text(
       "[data-preparation]",

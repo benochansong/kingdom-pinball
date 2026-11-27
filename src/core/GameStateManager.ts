@@ -64,12 +64,45 @@ export class GameStateManager {
   saveConflict = false;
   remaining: number = PHYSICS.spheres;
   time = 0;
+  lastFrameMs = 0;
+  updateCount = 0;
   charge = 0;
   charging = false;
   tutorialStep = -1;
   tutorialFlippers = new Set<string>();
   private accumulator = 0;
   private respawnAt = 0;
+  private missingSince = 0;
+  readonly ballLog: {
+    time: number;
+    event: string;
+    balls: number;
+    energy?: number;
+  }[] = [];
+  private traceBall(event: string) {
+    this.ballLog.push({
+      time: Math.round(this.time),
+      event,
+      balls: this.physics.balls.length,
+      energy: this.economy?.data.resources.energy,
+    });
+    if (this.ballLog.length > 80) this.ballLog.shift();
+  }
+  get ballStatus() {
+    if (this.state === "over") return "game-over";
+    if (this.physics.ball)
+      return this.charging
+        ? "charging"
+        : this.physics.launched
+          ? "in-play"
+          : "ready";
+    if (
+      this.state === "relaunch" &&
+      (this.economy?.data.resources.energy ?? 0) < 20
+    )
+      return "recovery-required";
+    return this.respawnAt > 0 ? "respawn-pending" : "missing";
+  }
   private recorded = true;
   private lastCheckpoint = 0;
   constructor(
@@ -141,6 +174,8 @@ export class GameStateManager {
     this.menu();
     this.mode = "kingdom";
     this.recorded = true;
+    this.respawnAt = 0;
+    this.missingSince = 0;
     this.war = new WarManager(data, storage);
     this.economy = this.war.player;
     this.army = this.war.army;
@@ -192,6 +227,7 @@ export class GameStateManager {
     if (data.result) this.setState("over");
     else if (data.player.launchState === "awaiting") {
       data.relaunchGrace = this.time + 3000;
+      this.respawnAt = this.time + 800;
       this.setState("relaunch");
     } else {
       this.physics.spawn();
@@ -297,8 +333,10 @@ export class GameStateManager {
     this.bindMagic();
     if (data.launchState === "ended") this.setState("over");
     else if (data.launchState === "awaiting") {
-      if (this.economy.canContinue()) this.setState("relaunch");
-      else this.endKingdom();
+      if (this.economy.canContinue()) {
+        this.respawnAt = this.time + 800;
+        this.setState("relaunch");
+      } else this.endKingdom();
     } else {
       this.physics.spawn();
       this.setState("playing");
@@ -306,10 +344,16 @@ export class GameStateManager {
   }
   relaunch(): boolean {
     if (this.state !== "relaunch" || !this.economy?.payRelaunch()) return false;
+    this.respawnAt = 0;
+    this.missingSince = 0;
     this.tilt.reset();
     this.recovery.reset();
     this.physics.spawn();
     this.setState("playing");
+    this.traceBall("respawn-paid");
+    this.events.emit("message", {
+      text: "새로운 공이 준비되었습니다. Space로 발사하세요.",
+    });
     return true;
   }
   endKingdom(): void {
@@ -465,15 +509,13 @@ export class GameStateManager {
     this.events.emit("state", { state });
   }
   pause(): void {
-    if (this.state === "playing" || (this.war && this.state === "relaunch"))
+    if (this.state === "playing" || this.state === "relaunch")
       this.setState("paused");
   }
   resume(): void {
     if (this.state === "paused" && !this.saveConflict && !this.builder?.active)
       this.setState(
-        this.war && this.economy?.data.launchState === "awaiting"
-          ? "relaunch"
-          : "playing",
+        this.economy?.data.launchState === "awaiting" ? "relaunch" : "playing",
       );
   }
   enterBuild(): boolean {
@@ -754,20 +796,24 @@ export class GameStateManager {
     return true;
   }
   update(frameMs: number): void {
+    this.lastFrameMs = frameMs;
+    this.updateCount++;
     if (this.sessionExtension?.canAdvance?.() === false) return;
     if (this.testBall) {
       this.testBall.update(frameMs);
       return;
     }
-    if (this.war && this.state === "relaunch") {
+    if (this.state === "relaunch") {
       const ms = Math.max(0, Math.min(frameMs, PHYSICS.maxFrameMs));
       this.time += ms;
-      if (this.time >= this.war.data.relaunchGrace) {
+      if (this.war && this.time >= this.war.data.relaunchGrace) {
         this.magic?.tick(ms / 1000);
         this.enemyMagic?.tick(ms / 1000);
         this.war.tick(ms / 1000, this.time);
         this.sessionExtension?.afterStep(ms / 1000);
       }
+      if (this.state === "relaunch" && this.time >= this.respawnAt)
+        this.relaunch();
       return;
     }
     if (this.state !== "playing") return;
@@ -842,8 +888,23 @@ export class GameStateManager {
         this.tilt.reset();
         this.recovery.reset();
         this.physics.spawn();
+        this.traceBall("respawn-classic");
         this.events.emit("message", { text: ko.ready });
       }
+      // Repair an absent body only when no legitimate respawn is pending.
+      // An in-flight loss still passes through the mode's normal life/cost rules.
+      if (!this.physics.ball && !this.respawnAt) {
+        this.missingSince ||= this.time;
+        if (this.time - this.missingSince >= 500) {
+          this.traceBall("missing-body-recovery");
+          this.missingSince = 0;
+          if (this.economy?.data.launchState === "ready") {
+            this.physics.spawn();
+            this.clearInputs();
+            this.recovery.reset();
+          } else this.drain("missing");
+        }
+      } else this.missingSince = 0;
       if (this.economy && this.time - this.lastCheckpoint >= 5000) {
         this.lastCheckpoint = this.time;
         this.checkpoint();
@@ -911,9 +972,24 @@ export class GameStateManager {
     if (this.tutorialStep === 5 && this.score.combo.count >= 3)
       this.finishTutorial();
   }
-  private drain(): void {
-    if (!this.physics.ball) return;
-    if (this.sessionExtension?.onLoss?.()) return;
+  private drain(reason = "drain"): void {
+    if (!this.physics.ball && reason !== "missing") return;
+    this.traceBall(reason);
+    this.clearInputs();
+    if (this.sessionExtension?.onLoss?.()) {
+      if (
+        this.state === "playing" &&
+        this.physics.ball &&
+        !this.physics.launched
+      ) {
+        if (this.economy) this.economy.data.launchState = "ready";
+        this.tilt.reset();
+        this.recovery.reset();
+        this.traceBall("mode-ball-save");
+        this.checkpoint();
+      }
+      return;
+    }
     if (this.practice) {
       this.physics.spawn();
       this.tilt.reset();
@@ -922,11 +998,13 @@ export class GameStateManager {
       return;
     }
     if (this.mode === "kingdom" && this.economy) {
+      this.magic?.endMulti();
       this.physics.removeBall();
       this.clearInputs();
       this.score.combo.reset();
       this.syncEconomy();
       this.economy.loseBall();
+      this.respawnAt = this.time + 800;
       this.events.emit("drain", {
         remaining: Math.floor(this.economy.data.resources.energy / 20),
       });
@@ -952,7 +1030,7 @@ export class GameStateManager {
       this.enemyMagic = undefined;
       this.setState("over");
     } else {
-      this.respawnAt = this.time + 1100;
+      this.respawnAt = this.time + 800;
       this.events.emit("message", { text: ko.lost });
     }
   }

@@ -76,6 +76,14 @@ it("bounds repeated effects, stops voices on pause/menu and permits UI while pau
   expect(a.activeVoices).toBe(1);
   g.menu();
   expect(a.activeVoices).toBe(0);
+  g.startWar({ preparation: 180 });
+  a.update();
+  expect(a.activeVoices).toBeGreaterThan(0);
+  g.war!.finish("defeat", "test");
+  const resultVoices = a.activeVoices;
+  expect(resultVoices).toBe(3);
+  a.update();
+  expect(a.activeVoices).toBe(resultVoices);
   a.dispose();
   g.dispose();
   vi.unstubAllGlobals();

@@ -704,8 +704,13 @@ export class ServerSimulation {
           this.time,
         );
         if (recovery === "return") {
-          g.physics.spawn();
-          g.economy!.data.launchState = "ready";
+          if (g.physics.balls.length > 1)
+            g.physics.removeSphere(g.physics.ball!);
+          else g.physics.spawn();
+          g.economy!.data.launchState = g.physics.launched
+            ? "inflight"
+            : "ready";
+          g.recovery.reset();
         }
         if (g.physics.ball && g.physics.ball.position.y > PHYSICS.drainY) {
           g.physics.removeBall();
@@ -714,10 +719,19 @@ export class ServerSimulation {
           g.score.combo.reset();
           this.lost[i]++;
           g.economy!.loseBall();
-          this.respawn[i] = this.time + 3000;
+          this.respawn[i] = this.time + 800;
+        }
+        if (!g.physics.ball && g.economy!.data.launchState === "inflight") {
+          g.clearInputs();
+          g.economy!.loseBall();
+          this.lost[i]++;
+          this.respawn[i] = this.time + 800;
         }
         if (!g.physics.ball && this.time >= this.respawn[i]) {
-          if (g.economy!.payRelaunch()) {
+          if (
+            g.economy!.data.launchState === "ready" ||
+            g.economy!.payRelaunch()
+          ) {
             g.physics.spawn();
             g.tilt.reset();
             g.recovery.reset();
@@ -860,6 +874,7 @@ export class ServerSimulation {
         hits: this.hits[seat],
         score: g.score.score,
         energyWait: Math.max(0, this.respawn[seat] - this.time),
+        launched: g.physics.launched,
       },
       opponent: table(other),
       battlefield: {

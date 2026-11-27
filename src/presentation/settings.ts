@@ -14,6 +14,7 @@ export const KEY_DEFAULTS = {
   storm: "KeyK",
 };
 export interface PresentationSettings {
+  language: "bilingual" | "ko" | "en";
   quality: Quality;
   autoQuality: boolean;
   shakeAmount: number;
@@ -38,6 +39,7 @@ export interface PresentationSettings {
   keys: typeof KEY_DEFAULTS;
 }
 export const defaultPresentation = (): PresentationSettings => ({
+  language: "bilingual",
   quality: "high",
   autoQuality: true,
   shakeAmount: 0.35,
@@ -98,6 +100,7 @@ export function sanitizePresentation(raw: unknown): PresentationSettings {
   if (["cycle", "day", "night", "sunset"].includes(String(r.lighting)))
     d.lighting = r.lighting as PresentationSettings["lighting"];
   if (r.ui === "advanced") d.ui = "advanced";
+  if (r.language === "ko" || r.language === "en") d.language = r.language;
   const keys = r.keys as Record<string, unknown> | undefined;
   if (keys && typeof keys === "object") {
     const candidate = { ...d.keys };

@@ -34,11 +34,16 @@ it("migrates old settings without erasing scores or external kingdom storage", (
   expect(save.data.highScore).toBe(1200);
   expect(save.data.settings.music).toBe(0.2);
   expect(save.data.settings.presentation.ui).toBe("simple");
+  expect(save.data.settings.presentation.language).toBe("bilingual");
+  save.data.settings.presentation.language = "en";
   save.data.settings.presentation.quality = "low";
   save.persist();
   expect(rows.get("campaign")).toBe("protected");
   expect(new SaveManager(storage).data.settings.presentation.quality).toBe(
     "low",
+  );
+  expect(new SaveManager(storage).data.settings.presentation.language).toBe(
+    "en",
   );
 });
 it("rejects corrupt settings and duplicate/reserved controls", () => {

@@ -1,0 +1,253 @@
+/* Content-sized controls: never shrink a Korean label to preserve secondary English. */
+body {
+  min-width: 320px;
+}
+#app button,
+.online-root button,
+summary {
+  word-break: keep-all;
+  overflow-wrap: normal;
+  line-height: 1.4;
+}
+#app button,
+.online-root button {
+  min-height: 44px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+#app p,
+#app label,
+.online-root p {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+#app .menu-group {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  min-width: 0;
+}
+#app details.menu-group:not([open]) {
+  display: block;
+}
+#app .menu-group h2,
+#app .menu-group summary {
+  font: 600 14px/1.5 system-ui;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  margin: 0;
+  padding: 10px 0;
+  cursor: pointer;
+}
+#app .menu-group summary {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+#app .welcome .bilingual-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 50px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 12px 16px;
+  font-size: calc(16px * var(--text-scale));
+  text-align: left;
+}
+#app .welcome .bilingual-button.primary {
+  min-height: 56px;
+}
+.bilingual-button .label-ko,
+.bilingual-button .label-en {
+  white-space: nowrap;
+  flex: none;
+}
+.bilingual-button .label-en {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+/* Visibility preserves intrinsic measurement and prevents ResizeObserver oscillation. */
+body[data-language="ko"] .bilingual-button .label-en,
+body[data-language="en"] .bilingual-button .label-ko,
+body:not([data-language="en"]) .bilingual-button.compact-label .label-en {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+body[data-language="en"] .bilingual-button .label-en {
+  font-size: calc(14px * var(--text-scale));
+  letter-spacing: 0;
+  opacity: 1;
+}
+#app .game-layout[data-state="menu"] {
+  grid-template-columns: minmax(310px, 410px) minmax(280px, 510px) minmax(
+      180px,
+      260px
+    );
+  gap: clamp(20px, 3vw, 48px);
+  justify-content: center;
+  padding: 20px 3vw;
+}
+#app .game-layout[data-state="menu"] > .left-panel {
+  max-height: calc(100dvh - 105px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 10px 24px 0;
+}
+#app .welcome {
+  padding: 0;
+}
+#app .welcome .title-crest {
+  display: none;
+}
+#app .welcome h1 {
+  font-size: clamp(30px, 3vw, 46px);
+  margin: 8px 0 10px;
+}
+#app .welcome .eyebrow {
+  margin-bottom: 12px;
+}
+#app .welcome .intro {
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+#app .welcome .tagline {
+  margin-bottom: 10px;
+}
+#app .welcome .edition-note {
+  margin-top: 20px;
+  font-size: 11px;
+}
+#app .menu-links[hidden],
+#app .mode-launch[hidden],
+#app button[hidden] {
+  display: none !important;
+}
+#app .dialog-actions,
+.online-orders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#app .dialog-actions button {
+  flex: 1 0 max-content;
+  max-width: 100%;
+}
+#app dialog {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+}
+#app .dialog-inner {
+  min-width: 0;
+}
+#app .setting {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#app .setting select {
+  max-width: 100%;
+}
+#app table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+#app .war-commands,
+#app .army-commands,
+#app .economy-nav {
+  gap: 8px;
+}
+#app .war-commands button,
+#app .army-commands button,
+#app .economy-nav button {
+  white-space: nowrap;
+  min-width: min-content;
+}
+#app button.danger,
+.online-root [data-online="surrender"],
+.online-root [data-online="surrenderConfirm"] {
+  border-color: #d78575;
+  color: #ffd7cb;
+  background: #4a2527;
+}
+#ball-diagnostics {
+  white-space: pre-wrap;
+  font: 11px/1.5 monospace;
+  max-height: 180px;
+  overflow: auto;
+}
+@media (max-width: 1399px) {
+  #app .game-layout[data-state="menu"] {
+    grid-template-columns: minmax(310px, 430px) minmax(280px, 520px);
+  }
+  #app .game-layout[data-state="menu"] > .right-panel {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  #app .game-layout[data-state="menu"] {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px 16px;
+  }
+  #app .game-layout[data-state="menu"] > .left-panel {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+  }
+  #app .game-layout[data-state="menu"] .table-section {
+    display: none;
+  }
+  #app .welcome {
+    display: block;
+    max-width: 500px;
+    margin: auto;
+  }
+  #app .welcome h1 {
+    display: block;
+    font-size: 34px;
+  }
+  #app .welcome .intro {
+    display: block;
+  }
+  #app .settings-tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app .topbar {
+    height: auto;
+    min-height: 50px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #app .top-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  #app .top-actions button {
+    font-size: 12px;
+    padding-inline: 8px;
+  }
+  #app .dialog-inner {
+    padding: 18px 14px;
+  }
+  #app .mode-grid,
+  #app .campaign-grid,
+  #app .magic-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app .war-commands,
+  #app .army-commands,
+  #app .economy-nav {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  #app .war-commands button,
+  #app .army-commands button,
+  #app .economy-nav button {
+    flex: 1 0 max-content;
+  }
+}
