@@ -1,4 +1,3 @@
-import {writeFileSync} from "node:fs";
 import { describe, it, expect } from "vitest";
 import Matter from "matter-js";
 import { GameStateManager } from "../src/core/GameStateManager";
@@ -326,7 +325,6 @@ describe("Magic integration boundaries", () => {
   });
 });
 it("records real simulation cost for the ball / army matrix", () => {
-  const metrics:object[]=[];
   for (const [count, units] of [
     [1, 50],
     [3, 50],
@@ -369,12 +367,10 @@ it("records real simulation cost for the ball / army matrix", () => {
       }
       g.update(1000 / 60);
     }
-    metrics.push({balls:count,units,ms:Math.round(performance.now()-start),seconds:5,remainingBalls:g.physics.balls.length,remainingUnits:g.army!.combat.units.filter(u=>u.hp>0).length});
     console.info(
       `MAGIC PERF ${count} balls / ${units} units: ${(performance.now() - start).toFixed(0)}ms for 5s; remaining ${g.physics.balls.length} balls / ${g.army!.combat.units.filter((u) => u.hp > 0).length} units`,
     );
     expect(g.physics.balls.length).toBeLessThanOrEqual(10);
     g.dispose();
   }
-  if(process.env.MAGIC_METRICS)writeFileSync("docs/magic-performance.json",JSON.stringify(metrics,null,2));
 }, 30000);
