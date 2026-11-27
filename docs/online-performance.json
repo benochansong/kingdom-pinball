@@ -1,0 +1,66 @@
+{
+  "runtime": "v24.14.0",
+  "platform": "win32",
+  "note": "Local CPU simulation and JSON serialization, not Internet capacity or browser FPS. No GC forced; heap deltas are not a leak conclusion.",
+  "results": [
+    {
+      "rooms": 1,
+      "simulatedSeconds": 6,
+      "wallMs": 443.2687000000001,
+      "p50": 1.7183999999999742,
+      "p95": 5.505800000000136,
+      "p99": 12.172900000000027,
+      "peakBallsPerTable": 10,
+      "initialUnitsPerRoom": 40,
+      "bytes": 1789139,
+      "cpu": {
+        "user": 891000,
+        "system": 31000
+      },
+      "heapBefore": 16308768,
+      "heapAfter": 24238832
+    },
+    {
+      "rooms": 5,
+      "simulatedSeconds": 6,
+      "wallMs": 1390.9250000000002,
+      "p50": 6.383800000000065,
+      "p95": 16.765699999999924,
+      "p99": 28.9054000000001,
+      "peakBallsPerTable": 10,
+      "initialUnitsPerRoom": 40,
+      "bytes": 8961075,
+      "cpu": {
+        "user": 1735000,
+        "system": 141000
+      },
+      "heapBefore": 20786272,
+      "heapAfter": 24115896
+    },
+    {
+      "rooms": 10,
+      "simulatedSeconds": 6,
+      "wallMs": 2551.416,
+      "p50": 12.311300000000301,
+      "p95": 27.537499999999454,
+      "p99": 45.663800000000265,
+      "peakBallsPerTable": 10,
+      "initialUnitsPerRoom": 40,
+      "bytes": 17927750,
+      "cpu": {
+        "user": 2766000,
+        "system": 203000
+      },
+      "heapBefore": 40177840,
+      "heapAfter": 45203568
+    }
+  ],
+  "longSession": {
+    "simulatedSeconds": 1800.0000000100902,
+    "wallMs": 11005.802699999998,
+    "result": "시간 종료 · 왕궁 체력 비율, 생존 방어시설 순",
+    "maxBodies": 31,
+    "maxUnits": 26,
+    "note": "Accelerated 30-minute server simulation, no wall-clock soak or GPU measurement; resources naturally run out."
+  }
+}

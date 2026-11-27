@@ -1,0 +1,18 @@
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY tsconfig*.json ./
+COPY server ./server
+COPY src ./src
+RUN npm run server:build
+FROM node:24-bookworm-slim
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /app/dist-server ./dist-server
+RUN mkdir /app/data && chown node:node /app/data
+USER node
+ENV NODE_ENV=production SERVER_HOST=0.0.0.0 SERVER_PORT=8787 DATABASE_URL=/app/data/online.sqlite
+EXPOSE 8787
+CMD ["node","dist-server/index.js"]

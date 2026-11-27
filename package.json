@@ -1,6 +1,6 @@
 {
   "name": "kingdom-pinball",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,14 +8,23 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "server:dev": "tsx watch server/index.ts",
+    "server:build": "tsc -p tsconfig.server.json && esbuild server/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist-server/index.js",
+    "server:start": "node dist-server/index.js",
+    "multiplayer:dev": "node scripts/multiplayer-dev.mjs"
   },
   "dependencies": {
     "matter-js": "^0.20.0",
-    "phaser": "^3.90.0"
+    "phaser": "^3.90.0",
+    "ws": "^8.23.0"
   },
   "devDependencies": {
     "@types/matter-js": "^0.20.2",
+    "@types/node": "^26.6.11",
+    "@types/ws": "^8.18.2",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^7.2.2",
     "vitest": "^4.0.13"

@@ -1,4 +1,5 @@
 import { mountVisualLab } from "./dev/VisualLab";
+import { MultiplayerUI } from "./network/MultiplayerUI";
 import { ModeSaveManager } from "./modes/ModeSaveManager";
 import { PresentationUI } from "./ui/PresentationUI";
 import { canonicalKey } from "./presentation/settings";
@@ -81,6 +82,7 @@ const modes = new GameModeManager(
 const modeUI = new ModeUI(ui, modes);
 const creatorUI = new TableCreatorUI(ui, modes);
 const presentationUI = new PresentationUI(ui, modes);
+const multiplayerUI = new MultiplayerUI(model, modes);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -292,6 +294,7 @@ if (import.meta.hot)
     modeUI.dispose();
     creatorUI.dispose();
     presentationUI.dispose();
+    multiplayerUI.dispose();
     magicUI.dispose();
     warUI.dispose();
     disposeLab?.();

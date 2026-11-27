@@ -42,10 +42,11 @@ export class MagicManager {
   constructor(
     readonly game: GameStateManager,
     readonly side: Side = "ally",
+    readonly playerControlled = false,
   ) {
     this.data = this.economy.data.magic ??= freshMagic();
     this.status = new StatusEffectManager(this.data, () => this.now);
-    if (side === "ally") {
+    if (side === "ally" || playerControlled) {
       this.balls = new BallManager(game.physics, this.data);
       // Safe load checkpoint consumes the already-paid ability, retaining cooldowns and gauges.
       if (this.data.multi) {
@@ -98,7 +99,9 @@ export class MagicManager {
     return !!this.game.war?.preparing;
   }
   get combat() {
-    return this.game.army!.combat;
+    return this.playerControlled && this.game.war
+      ? this.game.war.army.combat
+      : this.game.army!.combat;
   }
   get targets(): Target[] {
     return [...this.combat.units, ...(this.game.war?.data.structures ?? [])];
@@ -288,10 +291,14 @@ export class MagicManager {
   }
   resistance(t: Target, type: Element) {
     const defender =
-      t.side === "ally" ? this.game.economy! : this.game.war?.enemy;
+      this.playerControlled && this.game.war
+        ? this.game.war.economy(t.side)
+        : t.side === "ally"
+          ? this.game.economy!
+          : this.game.war?.enemy;
     let value = (defender?.data.magic?.research.resistance ?? 0) * 0.08;
     const faction = this.game.war?.data.options.enemy;
-    if (t.side === "enemy") {
+    if (t.side === "enemy" && !this.playerControlled) {
       if (faction === "iron" && type === "cannon") value += 0.15;
       if (faction === "crimson" && type === "fire") value += 0.15;
       if (faction === "arcane" && ["ice", "thunder"].includes(type))
@@ -756,6 +763,7 @@ export class MagicManager {
     return null;
   }
   private enemyAI() {
+    if (this.playerControlled) return;
     const w = this.game.war;
     if ((this.side !== "enemy" && !this.automatedFaction) || !w) return;
     const pending = this.data.enemyCast;

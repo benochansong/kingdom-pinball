@@ -217,6 +217,8 @@ export function freshWar(options: Partial<WarOptions> = {}): WarData {
   return w;
 }
 export class WarManager {
+  /** Online commands override AI orders without changing offline behavior. */
+  orders?: Partial<Record<Side, { order: WarOrder; lane: Lane }>>;
   objectiveControlled = false;
   environmentRule?: (item: BlueprintItem) => string | null;
   readonly player: EconomyManager;
@@ -803,7 +805,12 @@ export class WarManager {
       factor,
     );
   }
-  repair(id: string, emergency = false, side: Side = "ally"): string | null {
+  repair(
+    id: string,
+    emergency = false,
+    side: Side = "ally",
+    payer = this.economy(side),
+  ): string | null {
     const s = this.structure(id);
     if (this.data.result || !s || s.side !== side || s.hp >= s.maxHp)
       return "수리할 대상이 없습니다.";
@@ -811,8 +818,7 @@ export class WarManager {
       return "이미 작업 중이거나 수리 대기시간입니다.";
     if (s.castle && s.hp <= 0) return "무너진 왕궁은 수리할 수 없습니다.";
     const paid = this.repairQuote(id, emergency);
-    if (!this.economy(side).resources.transact(paid))
-      return "수리 자원이 부족합니다.";
+    if (!payer.resources.transact(paid)) return "수리 자원이 부족합니다.";
     const heal = s.castle
       ? Math.min(
           s.maxHp - s.hp,
@@ -1016,17 +1022,19 @@ export class WarManager {
     all: UnitEntity[],
   ): boolean {
     const allied = u.side === "ally",
-      order = allied
-        ? this.data.order
-        : this.data.ai.strategy === "emergency"
-          ? "defend"
-          : this.data.ai.strategy === "recovery"
-            ? "retreat"
-            : this.data.options.enemy === "shadow"
-              ? "economy"
-              : this.data.ai.strategy === "siege"
-                ? "siege"
-                : "frontline";
+      order =
+        this.orders?.[u.side]?.order ??
+        (allied
+          ? this.data.order
+          : this.data.ai.strategy === "emergency"
+            ? "defend"
+            : this.data.ai.strategy === "recovery"
+              ? "retreat"
+              : this.data.options.enemy === "shadow"
+                ? "economy"
+                : this.data.ai.strategy === "siege"
+                  ? "siege"
+                  : "frontline");
     const engagement =
       order === "frontline" ? 170 : order === "defend" ? 190 : 70;
     const close = all.some(
@@ -1046,7 +1054,9 @@ export class WarManager {
     )
       return false;
     if (close && order !== "retreat") return false;
-    const lane = allied ? this.data.lane : this.data.ai.lane,
+    const lane =
+        this.orders?.[u.side]?.lane ??
+        (allied ? this.data.lane : this.data.ai.lane),
       nav = this.army.navigation,
       combat = this.army.combat;
     if (order === "retreat" || order === "defend" || u.kind === "healer") {
@@ -1238,7 +1248,7 @@ export class WarManager {
       u.kingdomId = this.enemy.data.id;
       if (u.squad === "enemy") u.squad = "reserve";
     }
-    for (const u of this.army.living) u.kingdomId = this.player.data.id;
+    for (const u of this.army.living) u.kingdomId ??= this.player.data.id;
     this.bridge();
     if (
       !this.preparing &&

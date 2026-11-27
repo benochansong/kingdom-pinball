@@ -27,7 +27,8 @@ import { PathfindingSystem } from "./PathfindingSystem";
 import { maxHp, attackPower } from "./DamageCalculator";
 import { formationPosition } from "./FormationManager";
 export class ArmyManager {
-  unlockExtra?:(kind:UnitKind)=>string|null;
+  populationFilter?: (unit: UnitEntity) => boolean;
+  unlockExtra?: (kind: UnitKind) => string | null;
   externalCombat = false;
   side: "ally" | "enemy" = "ally";
   spawnOverride?: (b: BuildingEntity) => { x: number; y: number } | null;
@@ -55,7 +56,9 @@ export class ArmyManager {
     return this.data.units.filter((u) => u.hp > 0);
   }
   get population() {
-    return this.living.reduce((n, u) => n + unitConfig(u.kind).population, 0);
+    return this.living
+      .filter((u) => this.populationFilter?.(u) ?? true)
+      .reduce((n, u) => n + unitConfig(u.kind).population, 0);
   }
   get reserved() {
     return Object.values(this.data.queues).reduce(
@@ -107,7 +110,8 @@ export class ArmyManager {
     });
   }
   unlock(kind: UnitKind, building: BuildingEntity): string | null {
-    const extra=this.unlockExtra?.(kind);if(extra)return extra;
+    const extra = this.unlockExtra?.(kind);
+    if (extra) return extra;
     const c = unitConfig(kind);
     if (building.disabled) return "파괴된 시설을 먼저 재건하세요.";
     if (building.type !== c.building)

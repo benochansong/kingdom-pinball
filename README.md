@@ -1,6 +1,6 @@
 # KINGDOM PINBALL
 
-**Bounce, Build, Conquer!** — GREENWOOD KINGDOM에서 플레이하는 중세 판타지 핀볼. PHASE 1 코어 엔진, PHASE 2 경제, PHASE 3 왕국 건설, PHASE 4 군대·훈련, PHASE 5 독립 왕국 전쟁, PHASE 6 마법·멀티볼, PHASE 7 대륙 정복 캠페인과 PHASE 8 반복 플레이 모드를 구현했습니다.
+**Bounce, Build, Conquer!** — GREENWOOD KINGDOM에서 플레이하는 중세 판타지 핀볼. PHASE 1~8의 핀볼·경제·왕국·군대·전쟁·마법·캠페인·게임 모드에 PHASE 9 시각/음향과 PHASE 10 온라인 대전 초기 버전을 추가했습니다.
 
 전쟁은 메인 메뉴의 **KINGDOM WAR**에서 시작합니다. 5개 적 왕국, 3개 전쟁 유형, 실제 경제와 생산에 기반한 침공, 성벽·왕궁 파괴, 수리·재건 및 별도 저장을 지원합니다. L 지휘소, 1~7 명령, U 군대, F 진형, B 준비 건설. [구현·검증·성능 한계](docs/PHASE5.md)를 참고하세요.
 
@@ -14,7 +14,7 @@
 
 PHASE 9는 지역·건물·병력 연출, 상황별 합성 음악과 채널 믹서, SIMPLE/ADVANCED HUD, 키 매핑·고대비·품질 설정을 추가합니다. [구현 및 제한](docs/PHASE9.md), [자산 권리](ASSET_LICENSES.md), [실제 렌더 측정](docs/visual-performance.json)을 참고하세요. 대규모 150기+10공은 해당 개발 환경에서 약 18FPS로 목표에 미달했습니다.
 
-Node.js 20.19+ 또는 22.12+가 필요합니다. 개발에는 Node 24를 사용했습니다.
+온라인 서버를 포함한 개발·검증에는 Node.js 24를 사용합니다.
 
 ```sh
 npm install
@@ -30,7 +30,9 @@ npm run build
 npm run preview
 ```
 
-`dist/`를 정적 호스팅에 배포할 수 있습니다. 서버·계정·외부 API가 필요하지 않습니다. 모든 그래픽은 Canvas, 사운드는 Web Audio로 생성합니다. 외부 폰트나 음원 요청이 없습니다.
+싱글 플레이는 `dist/`를 정적 호스팅에 배포할 수 있으며 서버·계정·외부 API가 필요하지 않습니다. 모든 그래픽은 Canvas, 사운드는 Web Audio로 생성합니다. 외부 폰트나 음원 요청이 없습니다.
+
+온라인은 `.env.example`을 `.env`로 복사한 뒤 `npm run multiplayer:dev`로 실행합니다. **온라인 멀티플레이 · ONLINE**에서 두 게스트가 코드로 입장해 실제 1:1 전쟁, 협동 생존, IRON TITAN 레이드를 플레이합니다. 온라인에는 지속 Node 서버와 SQLite가 별도로 필요합니다. [한국어 실행·배포 안내](MULTIPLAYER_GUIDE.md), [23항목 구현·검증 및 남은 범위](docs/PHASE10.md)를 참고하세요. 공개 랭크, 추가 레이드 보스, 공개 커뮤니티 등 전체 10단계 기획의 일부는 아직 구현되지 않았습니다.
 
 ## 조작
 
