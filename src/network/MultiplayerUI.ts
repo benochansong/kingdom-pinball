@@ -9,7 +9,7 @@ import {
   type GameCommand,
 } from "./protocol";
 import { ONLINE_TARGETS } from "./table";
-import { RAILS } from "../data/table";
+import { tableRails } from "../data/table";
 import { drawRescueCannons } from "../scenes/TableArt";
 import { RESCUE } from "../config/rescue";
 import { BUILDINGS, buildingConfig } from "../config/buildings";
@@ -734,7 +734,8 @@ export class MultiplayerUI {
       c.fillRect(12, 12, 576, 876);
       c.strokeStyle = "#b9bd9e";
       c.lineCap = "butt";
-      for (const rail of RAILS) {
+      for (const rail of tableRails()) {
+        if (rail.rescueGate) continue;
         const a = Math.atan2(rail.b[1] - rail.a[1], rail.b[0] - rail.a[0]);
         c.lineWidth = rail.width;
         c.beginPath();

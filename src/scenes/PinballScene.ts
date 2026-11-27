@@ -1,4 +1,4 @@
-import { RESCUE } from "../config/rescue";
+import { drawRescueCannons } from "./RescueCannonArt";
 import { WorldPresentation } from "../presentation/WorldPresentation";
 import { cosmeticColor } from "../config/profile";
 import { ModeRenderer } from "../modes/ModeRenderer";
@@ -19,6 +19,9 @@ import { ArmyRenderer } from "../army/ArmyRenderer";
 
 export class PinballScene extends Phaser.Scene {
   private presentation?: WorldPresentation;
+  private rescueTexture!: Phaser.Textures.CanvasTexture;
+  private rescueImage!: Phaser.GameObjects.Image;
+  private rescueArtState = "";
   private moving!: Phaser.GameObjects.Graphics;
   private effects!: EffectsManager;
   private sphere!: Phaser.GameObjects.Image;
@@ -72,6 +75,15 @@ export class PinballScene extends Phaser.Scene {
     c.ellipse(26, 24, 4, 2, -0.7, 0, Math.PI * 2);
     c.fill();
     this.textures.addCanvas("sphere", canvas);
+    this.rescueTexture = this.textures.createCanvas(
+      "rescue-cannons",
+      600,
+      180,
+    )!;
+    this.rescueImage = this.add
+      .image(0, 720, "rescue-cannons")
+      .setOrigin(0)
+      .setDepth(16);
     this.effects = new EffectsManager(this, this.model);
     this.moving = this.add.graphics().setDepth(15);
     this.armyRenderer = new ArmyRenderer(this, this.model);
@@ -270,28 +282,31 @@ export class PinballScene extends Phaser.Scene {
         g.strokeCircle(c.x, c.y, 4);
       }
     }
-    if (this.model.physics.preset === "standard") {
-      const d = this.model.rescue;
-      for (const side of ["left", "right"] as const) {
-        const c = RESCUE.cannons[side];
-        const active = d.side === side && d.phase !== "IN_PLAY";
-        g.lineStyle(
-          12,
-          d.used >= d.total ? 0x182c29 : 0xdab65c,
-          d.used >= d.total ? 0.8 : 0.4,
-        );
-        g.lineBetween(c.x, c.y, c.exit.x, c.exit.y);
-        if (active) {
-          g.lineStyle(
-            3,
-            0xffe9a1,
-            this.model.save.data.settings.presentation.reduceFlash
-              ? 0.35
-              : 0.75,
-          );
-          g.strokeCircle(c.x, c.y, 24 + Math.sin(this.visualTime * 15) * 3);
-        }
-      }
+    this.rescueImage.setVisible(this.model.physics.preset === "standard");
+    const rescue = this.model.rescue;
+    const rescueArtState = JSON.stringify([
+      rescue.used,
+      rescue.total,
+      rescue.phase,
+      rescue.side,
+      rescue.gates,
+      rescue.pending ? Math.floor(this.visualTime * 10) : 0,
+      this.model.save.data.settings.presentation.reduceFlash,
+    ]);
+    if (this.rescueArtState !== rescueArtState) {
+      this.rescueArtState = rescueArtState;
+      const c = this.rescueTexture.context;
+      c.clearRect(0, 0, 600, 180);
+      c.save();
+      c.translate(0, -720);
+      drawRescueCannons(
+        c,
+        rescue,
+        this.visualTime * 12,
+        this.model.save.data.settings.presentation.reduceFlash,
+      );
+      c.restore();
+      this.rescueTexture.refresh();
     }
     // Subtle flames, flags, and crystal halo remain independent of gameplay bodies.
     for (const x of [220, 344]) {

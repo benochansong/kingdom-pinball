@@ -18,8 +18,14 @@ export interface RescueData {
   ballId: number | null;
   lastFire: number;
   needsExit: boolean;
-  pending?: { position: Point; velocity: Point; started: number };
+  pending?: {
+    position: Point;
+    velocity: Point;
+    started: number;
+    charged?: boolean;
+  };
   sequence: number;
+  gates?: { left: boolean; right: boolean };
   log: {
     side: CannonSide;
     ballId: number;
@@ -64,7 +70,7 @@ export function sanitizeRescue(
   d.sequence = num(r.sequence);
   d.side = r.side === "left" || r.side === "right" ? r.side : null;
   d.ballId = typeof r.ballId === "number" ? num(r.ballId) : null;
-  if (r.pending && d.side && d.used < d.total) {
+  if (r.pending && d.side && (d.used < d.total || r.pending.charged === true)) {
     const p = r.pending;
     if (
       p.position &&
@@ -83,6 +89,7 @@ export function sanitizeRescue(
           y: Math.max(-23, Math.min(23, p.velocity.y)),
         },
         started: num(p.started),
+        charged: p.charged === true && d.used > 0,
       };
       d.phase = "RESCUE_DETECTED";
     }
@@ -105,19 +112,29 @@ export function sanitizeRescue(
 export class RescueCannon {
   private held?: { body: Matter.Body; sensor: boolean; mask: number };
   private physics?: PinballPhysics;
+  private previous?: { id: number; position: Point; velocity: Point };
   remaining(d: RescueData) {
     return Math.max(0, d.total - d.used);
   }
   private safe(p: PinballPhysics, b: Matter.Body, side: CannonSide) {
     const c = RESCUE.cannons[side];
     const obstacles = Matter.Composite.allBodies(p.engine.world).filter(
-      (o) => o !== b && !o.isSensor,
+      (o) => o !== b && !o.isSensor && o !== p.rescueGates.get(side),
     );
-    // Check the muzzle and first 40px of flight, including current flipper positions.
-    for (const distance of [0, 10, 20, 30, 40]) {
+    // Sweep the real outlane-to-field flight through its open guide shutter.
+    for (let distance = 0; distance <= 170; distance += 5) {
+      const seconds = distance / Math.min(c.speed, p.maxSpeed);
       const point = {
         x: c.exit.x + c.direction.x * distance,
-        y: c.exit.y + c.direction.y * distance,
+        y:
+          c.exit.y +
+          c.direction.y * distance +
+          0.5 *
+            p.engine.gravity.y *
+            p.engine.gravity.scale *
+            1e6 *
+            seconds *
+            seconds,
       };
       if (
         Matter.Query.collides(
@@ -161,10 +178,26 @@ export class RescueCannon {
     if (this.physics !== p) {
       if (this.physics) this.release(this.physics);
       this.physics = p;
+      this.previous = undefined;
     }
+    enabled = enabled && p.rescueSensors.size === 2;
+    p.updateRescueHardware(enabled && this.remaining(d) > 0 && !d.pending);
+    d.gates = {
+      left: p.rescueGates.get("left")?.isSensor ?? false,
+      right: p.rescueGates.get("right")?.isSensor ?? false,
+    };
     const ball = p.ball;
+    const prior = this.previous;
+    this.previous = ball
+      ? {
+          id: ball.id,
+          position: { ...ball.position },
+          velocity: { ...ball.velocity },
+        }
+      : undefined;
     if (this.held && !p.balls.includes(this.held.body)) {
       this.release(p);
+      if (d.pending?.charged) d.used = Math.max(0, d.used - 1);
       d.pending = undefined;
       d.phase = "IN_PLAY";
       d.ballId = null;
@@ -182,6 +215,9 @@ export class RescueCannon {
         };
         p.heldBalls.add(ball.id);
         Matter.Body.setStatic(ball, true);
+        Matter.Body.setVelocity(ball, { x: 0, y: 0 });
+        Matter.Body.setAngularVelocity(ball, 0);
+        ball.force.x = ball.force.y = ball.torque = 0;
         ball.isSensor = true;
         ball.collisionFilter.mask = 0;
         d.ballId = ball.id;
@@ -195,20 +231,39 @@ export class RescueCannon {
           : age < RESCUE.captureAnimationDuration
             ? "RESCUE_CAPTURED"
             : "RESCUE_CHARGING";
-      if (d.phase !== next) {
-        d.phase = next;
-        onEvent(next, side, ball);
-      }
+      const phaseChanged = d.phase !== next;
+      d.phase = next;
       const t = Math.min(1, age / RESCUE.captureAnimationDuration);
       Matter.Body.setPosition(ball, {
         x: pending.position.x + (c.x - pending.position.x) * t,
         y: pending.position.y + (c.y - pending.position.y) * t,
       });
+      Matter.Body.setVelocity(ball, { x: 0, y: 0 });
+      Matter.Body.setAngularVelocity(ball, 0);
+      if (
+        age >= RESCUE.captureAnimationDuration &&
+        !pending.charged &&
+        this.remaining(d) > 0
+      ) {
+        // Charge only when this body is physically held at the anchor. Persist the debit
+        // with the pending capture so reloading the last shot cannot charge it twice.
+        pending.charged = true;
+        d.used++;
+        onChange();
+      }
+      if (phaseChanged) onEvent(next, side, ball);
       if (age < RESCUE.captureAnimationDuration + RESCUE.chargeDuration) return;
-      if (!enabled || !this.remaining(d) || !this.safe(p, ball, side)) {
+      if (
+        !enabled ||
+        !pending.charged ||
+        d.total <= 0 ||
+        d.used > d.total ||
+        !this.safe(p, ball, side)
+      ) {
         this.release(p);
         Matter.Body.setPosition(ball, pending.position);
         Matter.Body.setVelocity(ball, pending.velocity);
+        if (pending.charged) d.used = Math.max(0, d.used - 1);
         d.pending = undefined;
         d.phase = "IN_PLAY";
         d.lastFire = now;
@@ -219,8 +274,7 @@ export class RescueCannon {
         onChange();
         return;
       }
-      // Commit exactly once before the physical shot. Reload cannot refund a completed shot.
-      d.used++;
+      // The held capture already consumed one shot; launch must not debit it again.
       d.sequence++;
       d.pending = undefined;
       d.phase = "RESCUE_LAUNCHING";
@@ -228,7 +282,9 @@ export class RescueCannon {
       d.needsExit = true;
       onChange();
       this.release(p);
-      Matter.Body.setPosition(ball, c.exit);
+      p.openRescueGate(side);
+      d.gates[side] = true;
+      // No relocation to the field: the ball leaves the outlane chamber under velocity.
       const speed = Math.min(c.speed, RESCUE.maximumBallSpeed, p.maxSpeed);
       Matter.Body.setVelocity(ball, {
         x: (c.direction.x * speed) / 60,
@@ -270,23 +326,27 @@ export class RescueCannon {
     const { x, y } = ball.position,
       vx = ball.velocity.x * 60,
       vy = ball.velocity.y * 60;
-    if (
-      vy < RESCUE.minimumBallSpeed ||
-      y >= PHYSICS.drainY ||
-      !Number.isFinite(x + y + vx + vy)
-    )
-      return;
+    if (!Number.isFinite(x + y + vx + vy)) return;
     for (const side of ["left", "right"] as const) {
-      const c = RESCUE.cannons[side],
-        z = c.zone;
-      if (x < z.minX || x > z.maxX || y < z.minY || y > z.maxY) continue;
-      const inward = side === "left" ? vx : -vx;
-      const guide =
-        side === "left"
-          ? 86 + ((Math.min(y, 790) - 675) * 91) / 115
-          : 492 - ((Math.min(y, 790) - 675) * 93) / 115;
-      if (inward > 30 || (side === "left" ? x > guide - 20 : x < guide + 20))
-        continue;
+      const sensor = p.rescueSensors.get(side);
+      if (!sensor) continue;
+      const direct =
+        y < PHYSICS.drainY &&
+        vy >= RESCUE.minimumBallSpeed &&
+        Matter.Query.collides(ball, [sensor]).length > 0;
+      const swept =
+        prior?.id === ball.id &&
+        prior.position.y < PHYSICS.drainY &&
+        y > prior.position.y &&
+        prior.velocity.y * 60 >= RESCUE.minimumBallSpeed &&
+        Matter.Query.ray(
+          [sensor],
+          prior.position,
+          { x, y },
+          PHYSICS.ballRadius * 2,
+        ).length > 0;
+      if (!direct && !swept) continue;
+      // The corridor follows the outer side of the guide, never the main field.
       if (!this.safe(p, ball, side)) {
         d.lastFire = now;
         d.log.push({ side, ballId: ball.id, time: now, result: "blocked" });
@@ -298,7 +358,7 @@ export class RescueCannon {
       d.ballId = ball.id;
       d.phase = "RESCUE_DETECTED";
       d.pending = {
-        position: { x, y },
+        position: direct ? { x, y } : prior!.position,
         velocity: { ...ball.velocity },
         started: now,
       };

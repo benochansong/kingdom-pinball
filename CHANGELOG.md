@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.2-beta.2 — 2026-11-27
+
+- Installed real sensor bodies, catch beds and opening guide shutters inside both outlanes. The same ball now flies from the cannon anchor without relocation into the main field.
+- Fixed wall-rebound capture rejection, expanded sensing along each outlane and added swept detection before drain. Capture explicitly stops linear/angular velocity and holds the ball for 300ms.
+- Debit the shared quota only upon successful anchored hold, persist that debit with the pending capture, avoid double charging on reload, and refund blocked/cancelled captures.
+- Replaced decorative arrow barrels with metal cannons synchronized to capture, charge, fire and shared empty states; retained BALL SAVE and existing mode rules.
+- Verified 354 tests (2 existing skips), client/server builds, 240 physical trials, and actual browser slow/fast capture on both sides, exhaustion and keyboard flipper returns. See [the Korean 11-part report](docs/RESCUE_HOTFIX.md) for evidence and limits.
+
 ## 0.11.2-beta.1 — 2026-11-27
 
 - Replaced passive outlane guards and runtime rechargeable kickbacks with automatic Royal Rescue Cannons: same Matter body, exactly two shared shots per run.

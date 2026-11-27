@@ -92,6 +92,7 @@ export interface Rail {
   b: [number, number];
   width: number;
   sling?: boolean;
+  rescueGate?: "left" | "right";
 }
 export const RAILS: Rail[] = [
   { a: [43, 766], b: [43, 174], width: 24 },
@@ -113,6 +114,22 @@ export const RAILS: Rail[] = [
   { a: [496, 372], b: [473, 413], width: 18 },
   { a: [538, 844], b: [572, 844], width: 18 },
 ];
+
+/** The lower guide is a real shutter: solid normally, open only for a rescue shot. */
+export function tableRails(rescue = true): Rail[] {
+  if (!rescue) return RAILS;
+  return RAILS.flatMap((rail): Rail[] => {
+    if (rail.a[1] !== 675 || rail.b[1] !== 790) return [rail];
+    const split: [number, number] = [
+      rail.a[0] + (rail.b[0] - rail.a[0]) * 0.58,
+      rail.a[1] + (rail.b[1] - rail.a[1]) * 0.58,
+    ];
+    return [
+      { ...rail, b: split },
+      { ...rail, a: split, rescueGate: rail.a[0] < 300 ? "left" : "right" },
+    ];
+  });
+}
 
 export const TUTORIAL = [
   { title: "첫 번째 출정", text: "Space를 길게 눌러 발사 강도를 충전하세요." },

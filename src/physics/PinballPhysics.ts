@@ -1,6 +1,7 @@
 import Matter from "matter-js";
 import { COLLISION, PHYSICS } from "../config/physics";
-import { RAILS, TARGETS, type TargetDefinition } from "../data/table";
+import { tableRails, TARGETS, type TargetDefinition } from "../data/table";
+import { RESCUE, type CannonSide } from "../config/rescue";
 import { FlipperController } from "./FlipperController";
 import { SLING } from "../config/pinball";
 import { PinballTelemetry } from "./PinballTelemetry";
@@ -44,6 +45,41 @@ export class PinballPhysics {
   private incoming = new Map<number, { x: number; y: number }>();
   private slingAt = new Map<number, number>();
   readonly heldBalls = new Set<number>();
+  readonly rescueSensors = new Map<CannonSide, Matter.Body>();
+  readonly rescueGates = new Map<CannonSide, Matter.Body>();
+  readonly rescueCatchers = new Map<CannonSide, Matter.Body>();
+  private rescueGateUntil = new Map<CannonSide, number>();
+  openRescueGate(side: CannonSide) {
+    const gate = this.rescueGates.get(side);
+    if (gate) {
+      gate.isSensor = true;
+      this.rescueGateUntil.set(side, this.engine.timing.timestamp + 350);
+    }
+  }
+  updateRescueHardware(available: boolean) {
+    for (const catcher of this.rescueCatchers.values())
+      catcher.isSensor = !available;
+    for (const [side, gate] of this.rescueGates) {
+      if (
+        !gate.isSensor ||
+        this.engine.timing.timestamp < (this.rescueGateUntil.get(side) ?? 0)
+      )
+        continue;
+      // Never close a shutter through any live ball, including temporary multiballs.
+      const occupied = this.balls.some(
+        (b) =>
+          Matter.Query.collides(
+            Matter.Bodies.circle(
+              b.position.x,
+              b.position.y,
+              PHYSICS.ballRadius + 4,
+            ),
+            [gate],
+          ).length,
+      );
+      if (!occupied) gate.isSensor = false;
+    }
+  }
   private nextTargets: TargetDefinition[];
   addTarget(target: TargetDefinition) {
     if (this.nextTargets.some((t) => t.id === target.id)) return;
@@ -82,7 +118,7 @@ export class PinballPhysics {
     readonly preset: "standard" | "authored" = "standard",
   ) {
     this.nextTargets = targets;
-    for (const rail of RAILS) {
+    for (const rail of tableRails(preset === "standard")) {
       const dx = rail.b[0] - rail.a[0];
       const dy = rail.b[1] - rail.a[1];
       const body = Bodies.rectangle(
@@ -95,12 +131,38 @@ export class PinballPhysics {
           angle: Math.atan2(dy, dx),
           restitution: rail.sling ? 1 : PHYSICS.wallRestitution,
           friction: 0.015,
-          label: rail.sling ? "sling" : "wall",
+          label: rail.rescueGate
+            ? `rescue-gate-${rail.rescueGate}`
+            : rail.sling
+              ? "sling"
+              : "wall",
           collisionFilter: { category: COLLISION.wall },
         },
       );
       Composite.add(this.engine.world, body);
+      if (rail.rescueGate) this.rescueGates.set(rail.rescueGate, body);
     }
+    if (preset === "standard")
+      for (const side of ["left", "right"] as const) {
+        const c = RESCUE.cannons[side];
+        const centre = Matter.Vertices.centre(c.corridor as Matter.Vector[]);
+        const sensor = Bodies.fromVertices(centre.x, centre.y, [c.corridor], {
+          isStatic: true,
+          isSensor: true,
+          label: `rescue-intake-${side}`,
+          collisionFilter: { category: COLLISION.gate },
+        });
+        const catcher = Bodies.rectangle(c.x, c.y + 16, 44, 6, {
+          isStatic: true,
+          isSensor: true,
+          label: `rescue-catch-${side}`,
+          restitution: 0,
+          collisionFilter: { category: COLLISION.gate },
+        });
+        this.rescueSensors.set(side, sensor);
+        this.rescueCatchers.set(side, catcher);
+        Composite.add(this.engine.world, [sensor, catcher]);
+      }
     for (const target of this.nextTargets) {
       const body = Bodies.circle(target.x, target.y, target.radius, {
         isStatic: true,

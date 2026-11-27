@@ -2,7 +2,7 @@
 
 **Bounce, Build, Conquer!** — GREENWOOD KINGDOM에서 플레이하는 중세 판타지 핀볼. PHASE 1~8의 핀볼·경제·왕국·군대·전쟁·마법·캠페인·게임 모드에 PHASE 9 시각/음향과 PHASE 10 온라인 대전 초기 버전을 추가했습니다.
 
-**현재: 0.11.2-beta.1.** 원형 가드를 ROYAL RESCUE CANNON으로 교체했습니다. 좌우가 한 판의 2회를 공유하고 저장·이어하기에도 사용 횟수를 유지합니다. [실행 안내](RELEASE_GUIDE.md), [11.2 구현·15항목 검증](docs/PHASE11_2.md), [구조 경로 실측](docs/RESCUE_MEASUREMENTS.json), [변경 기록](CHANGELOG.md)을 확인하세요. 온라인은 베타입니다.
+**현재: 0.11.2-beta.2.** 좌우 실제 도랑의 ROYAL RESCUE CANNON이 공을 포착하고 0.3초 고정한 뒤 중앙으로 발사합니다. 좌우 합계 2회이며 고정 성공 시 차감하고 저장·이어하기에도 유지합니다. [실행 안내](RELEASE_GUIDE.md), [포착 실패 핫픽스·11항목 검증](docs/RESCUE_HOTFIX.md), [현재 물리 경로 실측](docs/OUTLANE_RESCUE_MEASUREMENTS.json), [변경 기록](CHANGELOG.md)을 확인하세요. 온라인은 베타입니다.
 
 전쟁은 메인 메뉴의 **KINGDOM WAR**에서 시작합니다. 5개 적 왕국, 3개 전쟁 유형, 실제 경제와 생산에 기반한 침공, 성벽·왕궁 파괴, 수리·재건 및 별도 저장을 지원합니다. L 지휘소, 1~7 명령, U 군대, F 진형, B 준비 건설. [구현·검증·성능 한계](docs/PHASE5.md)를 참고하세요.
 

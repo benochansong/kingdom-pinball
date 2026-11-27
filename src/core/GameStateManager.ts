@@ -63,6 +63,11 @@ export class GameStateManager {
           y: ball.position.y,
           remaining: this.rescue.total - this.rescue.used,
         });
+        if (phase === "RESCUE_CHARGING")
+          this.events.emit("message", {
+            text: `CAPTURED · 포착 완료 · ${this.rescue.total - this.rescue.used}회 남음`,
+            tone: "gold",
+          });
         if (phase === "RESCUE_LAUNCHING") {
           this.recovery.reset();
           this.events.emit("message", {

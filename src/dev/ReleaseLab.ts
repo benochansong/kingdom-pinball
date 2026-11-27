@@ -18,10 +18,12 @@ export function mountReleaseLab(
     .querySelector("details")!
     .insertAdjacentHTML(
       "beforeend",
-      '<button data-release="launch25">실제 25% 발사 · 4초 진행</button><button data-release="step">1초 진행</button><button data-release="restore">왕국 저장 복원</button><button data-release="rescue-left">좌측 구조 포착</button><button data-release="rescue-right">우측 구조 포착</button><button data-release="rescue-step">구조 0.5초 진행</button><button data-release="rescue-play">구조 후 플레이</button>',
+      '<button data-release="launch25">실제 25% 발사 · 4초 진행</button><button data-release="step">1초 진행</button><button data-release="restore">왕국 저장 복원</button><button data-release="rescue-left">좌측 도랑 진입</button><button data-release="rescue-right">우측 도랑 진입</button><button data-release="rescue-fast-left">좌측 고속 도랑 진입</button><button data-release="rescue-fast-right">우측 고속 도랑 진입</button><button data-release="rescue-tick">구조 0.1초 진행</button><button data-release="rescue-step">구조 0.5초 진행</button><button data-release="rescue-play">구조 후 플레이</button>',
     );
   panel.style.cssText =
     "position:fixed;bottom:0;left:0;z-index:10000;background:#10251e;color:#fff;max-width:95vw;font-size:12px;max-height:45vh;overflow:auto";
+  panel.querySelector("details")!.append(panel.querySelector("pre")!);
+  panel.querySelector("pre")!.style.cssText = "max-height:140px;overflow:auto";
   const abort = new AbortController();
   panel.addEventListener(
     "click",
@@ -39,7 +41,14 @@ export function mountReleaseLab(
         if (action === "sandbox") modes.start("sandbox", defaultModeOptions());
       }
       if (action.startsWith("rescue-")) {
-        if (action === "rescue-left" || action === "rescue-right") {
+        if (
+          [
+            "rescue-left",
+            "rescue-right",
+            "rescue-fast-left",
+            "rescue-fast-right",
+          ].includes(action)
+        ) {
           if (g.state === "paused") g.resume();
           if (!g.physics.launched) {
             g.chargeStart();
@@ -50,15 +59,20 @@ export function mountReleaseLab(
           Matter.Body.setPosition(b, { x: 288, y: 600 });
           g.time += 2500;
           g.updateRescue();
-          const left = action === "rescue-left";
-          Matter.Body.setPosition(b, { x: left ? 110 : 466, y: 775 });
-          Matter.Body.setVelocity(b, { x: left ? -1 : 1, y: 6 });
-          g.updateRescue();
+          const left = action.endsWith("left");
+          Matter.Body.setPosition(b, { x: left ? 75 : 501, y: 680 });
+          Matter.Body.setVelocity(b, {
+            x: 0,
+            y: action.includes("fast") ? 22 : 1,
+          });
+          for (let i = 0; i < 180 && !g.rescue.pending; i++)
+            g.update(1000 / 240);
           g.pause();
         } else {
           g.resume();
-          if (action === "rescue-step") {
-            for (let i = 0; i < 120; i++) g.update(1000 / 240);
+          if (action === "rescue-step" || action === "rescue-tick") {
+            for (let i = 0; i < (action === "rescue-tick" ? 24 : 120); i++)
+              g.update(1000 / 240);
             g.pause();
           }
         }
@@ -96,6 +110,20 @@ export function mountReleaseLab(
         position: g.physics.ball?.position,
         velocity: g.physics.ball?.velocity,
         held: [...g.physics.heldBalls],
+        angularVelocity: g.physics.ball?.angularVelocity,
+        liveBall: g.physics.ball
+          ? g.physics.telemetry.live.get(g.physics.ball.id)
+          : undefined,
+        cannonSensors: [...g.physics.rescueSensors].map(([side, b]) => ({
+          side,
+          id: b.id,
+          x: b.position.x,
+          y: b.position.y,
+        })),
+        shutters: [...g.physics.rescueGates].map(([side, b]) => ({
+          side,
+          open: b.isSensor,
+        })),
         protection: g.protection.data,
         statistics: g.physics.telemetry.summary(),
         bodies: Matter.Composite.allBodies(g.physics.engine.world).length,

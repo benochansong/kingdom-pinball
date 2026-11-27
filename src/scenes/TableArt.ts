@@ -1,52 +1,10 @@
-import { RAILS, TARGETS, type TargetDefinition } from "../data/table";
-import { RESCUE } from "../config/rescue";
-import type { RescueData } from "../systems/RescueCannon";
-export function drawRescueCannons(
-  c: CanvasRenderingContext2D,
-  data?: RescueData,
-) {
-  for (const side of ["left", "right"] as const) {
-    const p = RESCUE.cannons[side],
-      ready = !data || data.used < data.total,
-      active = data?.side === side && !!data.pending;
-    c.save();
-    c.translate(p.x, p.y);
-    c.rotate(Math.atan2(p.direction.y, p.direction.x));
-    const length = Math.hypot(p.exit.x - p.x, p.exit.y - p.y);
-    c.fillStyle = "#503d29";
-    c.strokeStyle = "#b69b60";
-    c.lineWidth = 2;
-    c.fillRect(-18, -19, 38, 38);
-    c.strokeRect(-18, -19, 38, 38);
-    c.fillStyle = ready ? "#bd9650" : "#625b48";
-    c.fillRect(0, -9, length, 18);
-    c.strokeRect(0, -9, length, 18);
-    c.fillStyle = "#142a29";
-    c.fillRect(length - 6, -11, 8, 22);
-    c.strokeStyle = active ? "#fff4bc" : ready ? "#f1cf73" : "#777364";
-    c.lineWidth = 3;
-    c.beginPath();
-    c.moveTo(18, 0);
-    c.lineTo(length - 16, 0);
-    c.moveTo(length - 26, -5);
-    c.lineTo(length - 16, 0);
-    c.lineTo(length - 26, 5);
-    c.stroke();
-    c.fillStyle = active ? "#fff3a2" : ready ? "#dfbb55" : "#504e40";
-    c.beginPath();
-    c.moveTo(-12, -7);
-    c.lineTo(-5, -2);
-    c.lineTo(0, -10);
-    c.lineTo(5, -2);
-    c.lineTo(12, -7);
-    c.lineTo(9, 9);
-    c.lineTo(-9, 9);
-    c.closePath();
-    c.fill();
-    c.restore();
-  }
-}
-
+import {
+  RAILS,
+  tableRails,
+  TARGETS,
+  type TargetDefinition,
+} from "../data/table";
+export { drawRescueCannons } from "./RescueCannonArt";
 type Ctx = CanvasRenderingContext2D;
 const polygon = (
   c: Ctx,
@@ -531,8 +489,8 @@ export function createTableArt(
       ],
       "#bdc3a344",
     );
-  for (const rail of RAILS) {
-    if (rail.sling) continue;
+  for (const rail of tableRails(guards)) {
+    if (rail.sling || rail.rescueGate) continue;
     const angle = Math.atan2(rail.b[1] - rail.a[1], rail.b[0] - rail.a[0]);
     const ax = rail.a[0] - Math.cos(angle) * 4,
       ay = rail.a[1] - Math.sin(angle) * 4;
@@ -572,7 +530,7 @@ export function createTableArt(
       c.restore();
     }
   }
-  if (guards) drawRescueCannons(c);
+
   // Brass-lined, carved slingshots.
   for (const mirrored of [false, true]) {
     c.save();
