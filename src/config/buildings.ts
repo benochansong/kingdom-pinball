@@ -194,7 +194,7 @@ export const BUILDINGS: BuildingConfig[] = [
     "마법탑",
     "magic",
     { wood: 60, stone: 120, gold: 150, mana: 15 },
-    4,
+    2,
     30,
     30,
     "유효 충돌 가속 · 마법 충전",
@@ -277,6 +277,10 @@ export const BUILDINGS: BuildingConfig[] = [
     "강화 및 연구 기반",
     { limit: 2 },
   ),
+  b('elementalForge','속성 대장간','magic',{wood:100,stone:120,gold:150,mana:15},3,34,34,'공성·폭발 속성 연구',{limit:1}),
+  b('mysticLibrary','마법 도서관','magic',{wood:150,stone:100,gold:180,mana:20},3,34,34,'주문·고급 속성·효율 연구',{limit:1}),
+  b('multiballShrine','분열 제단','magic',{wood:80,stone:150,gold:200,mana:25},4,32,32,'멀티볼 충전과 연구',{shape:'circle',limit:1}),
+  b('stormObelisk','폭풍의 오벨리스크','magic',{wood:120,stone:250,gold:300,mana:50},5,30,30,'CORE STORM 충전과 연구',{shape:'circle',limit:1}),
 ];
 // Phase 4 opens the existing barracks at settlement; saved instances keep their IDs and levels.
 BUILDINGS.find((b) => b.id === "barracks")!.rank = 1;

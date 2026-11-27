@@ -30,7 +30,7 @@ export class EnemyAI {
       const f = options[a.harvestIndex++ % Math.min(3, options.length)];
       if (f) {
         e.data.launchState = "inflight";
-        e.harvest(f.target, 300, true);
+        if (e.harvest(f.target, 300, true)) w.onHarvest(f.target);
       }
     }
     if (w.now < a.nextThink) return;

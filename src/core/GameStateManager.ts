@@ -23,6 +23,7 @@ import { WarManager, freshWar } from "../war/WarManager";
 import { WarSaveManager } from "../war/WarSaveManager";
 import type { WarOptions } from "../war/types";
 import { WAR_TARGETS } from "../config/war";
+import { MagicManager } from "../magic/MagicManager";
 
 export class GameStateManager {
   readonly events = new EventBus();
@@ -37,8 +38,11 @@ export class GameStateManager {
   testBall?: TestBallSimulator;
   army?: ArmyManager;
   war?: WarManager;
+  magic?: MagicManager;
+  enemyMagic?: MagicManager;
   lastBattleResult?: BattleRecord;
   private practice?: {
+    magic?: MagicManager;
     economy: EconomyManager;
     builder: BuildingManager;
     army: ArmyManager;
@@ -76,18 +80,64 @@ export class GameStateManager {
   }
   private bindPhysics(): void {
     this.physics.onHit = (contact) => this.hit(contact);
-    this.physics.onBuildingHit = (id, speed) => this.buildingHit(id, speed);
+    this.physics.onBuildingHit = (id, speed, ball) =>
+      this.buildingHit(id, speed, ball);
     this.physics.onImpact = (x, y, speed) => {
       if (speed > 160) this.events.emit("impact", { x, y, speed });
     };
   }
-  startWar(options?: Partial<WarOptions>): boolean {
-    const data = options ? freshWar(options) : this.warSave.load();
+  sandboxExit?: () => void;
+  sandboxKind = "";
+  /** Retain a paused session while an isolated exercise owns the active engine. */
+  suspendSession() {
+    this.checkpoint();
+    this.clearInputs();
+    const snapshot = {
+      physics: this.physics,
+      score: this.score,
+      tilt: this.tilt,
+      recovery: this.recovery,
+      state: this.state,
+      mode: this.mode,
+      economy: this.economy,
+      builder: this.builder,
+      army: this.army,
+      war: this.war,
+      magic: this.magic,
+      enemyMagic: this.enemyMagic,
+      time: this.time,
+      remaining: this.remaining,
+      saveConflict: this.saveConflict,
+      recorded: this.recorded,
+      lastCheckpoint: this.lastCheckpoint,
+      respawnAt: this.respawnAt,
+    };
+    this.physics = new PinballPhysics();
+    this.economy = undefined;
+    this.army = undefined;
+    this.war = undefined;
+    this.magic = undefined;
+    this.enemyMagic = undefined;
+    this.builder = undefined;
+    this.tilt = new TiltSystem();
+    this.recovery = new BallRecoverySystem();
+    this.state = "menu";
+    return () => {
+      this.physics.dispose();
+      Object.assign(this, snapshot);
+      this.sandboxExit = undefined;
+      this.sandboxKind = "";
+      this.bindPhysics();
+      this.setState(snapshot.state === "playing" ? "paused" : snapshot.state);
+    };
+  }
+  startWar(options?: Partial<WarOptions>, storage = this.warSave): boolean {
+    const data = options ? freshWar(options) : storage.load();
     if (!data) return false;
     this.menu();
     this.mode = "kingdom";
     this.recorded = true;
-    this.war = new WarManager(data, this.warSave);
+    this.war = new WarManager(data, storage);
     this.economy = this.war.player;
     this.army = this.war.army;
     this.builder = this.war.builder;
@@ -103,12 +153,11 @@ export class GameStateManager {
     this.recovery.reset();
     this.saveConflict = false;
     this.war.canMaterialize = (x, y, type) => {
-      const b = this.physics.ball,
-        c = buildingConfig(type)!;
-      return (
-        !b ||
-        Math.hypot(b.position.x - x, b.position.y - y) >
-          Math.hypot(c.width, c.height) / 2 + 16
+      const c = buildingConfig(type)!;
+      return this.physics.balls.every(
+        (b) =>
+          Math.hypot(b.position.x - x, b.position.y - y) >
+          Math.hypot(c.width, c.height) / 2 + 16,
       );
     };
     this.war.onNotice = (text) =>
@@ -116,10 +165,22 @@ export class GameStateManager {
     this.war.onSound = (kind) => this.events.emit("militarySound", { kind });
     this.war.onLayout = () => this.applyWarLayout();
     this.war.onEnd = () => {
+      this.magic?.endMulti();
+      if (this.magic) {
+        this.magic.data.statuses = [];
+        this.magic.data.fields = [];
+        this.magic.effects = [];
+      }
+      if (this.enemyMagic) {
+        this.enemyMagic.data.statuses = [];
+        this.enemyMagic.data.fields = [];
+        this.enemyMagic.effects = [];
+      }
       this.syncEconomy();
       this.setState("over");
     };
     this.applyWarLayout();
+    this.bindMagic();
     this.economy.resumeCheckpoint();
     if (data.result) this.setState("over");
     else if (data.player.launchState === "awaiting") {
@@ -148,6 +209,8 @@ export class GameStateManager {
     this.builder = undefined;
     this.finishRecord();
     this.war = undefined;
+    this.magic = undefined;
+    this.enemyMagic = undefined;
     this.mode = "classic";
     this.economy = undefined;
     this.saveConflict = false;
@@ -175,6 +238,8 @@ export class GameStateManager {
     this.stopTestBall();
     this.finishRecord();
     this.war = undefined;
+    this.magic = undefined;
+    this.enemyMagic = undefined;
     if (fresh) {
       const old = this.economySave.load();
       if (old) this.economySave.archive(old);
@@ -218,6 +283,7 @@ export class GameStateManager {
     this.tilt.reset();
     this.recovery.reset();
     this.tutorialStep = -1;
+    this.bindMagic();
     if (data.launchState === "ended") this.setState("over");
     else if (data.launchState === "awaiting") {
       if (this.economy.canContinue()) this.setState("relaunch");
@@ -263,6 +329,32 @@ export class GameStateManager {
     }
     this.economy?.checkpoint();
   }
+  private bindMagic() {
+    if (!this.economy || !this.army) return;
+    this.magic = new MagicManager(this);
+    this.enemyMagic = this.war ? new MagicManager(this, "enemy") : undefined;
+    const combat = this.army.combat;
+    combat.movementFactor = (u) =>
+      Math.min(
+        this.magic!.status.movement(u.id),
+        this.enemyMagic?.status.movement(u.id) ?? 1,
+      );
+    combat.intervalFactor = (u) =>
+      Math.max(
+        this.magic!.status.interval(u.id),
+        this.enemyMagic?.status.interval(u.id) ?? 1,
+      );
+    combat.damageFilter = (u, n) =>
+      this.enemyMagic?.damageFilter(u, this.magic!.damageFilter(u, n)) ??
+      this.magic!.damageFilter(u, n);
+    combat.sphereFactor = (u) => this.magic!.sphereFactor(u);
+    combat.onSphereContact = (u, n) => this.magic!.direct(u, n);
+    if (this.war)
+      this.war.onHarvest = (id) => this.enemyMagic?.validHit(id, id);
+    if (this.war)
+      this.war.damageFilter = (s, n) =>
+        this.enemyMagic!.damageFilter(s, this.magic!.damageFilter(s, n));
+  }
   private bindArmy() {
     if (!this.army) return;
     this.army.onNotice = (text) =>
@@ -291,6 +383,7 @@ export class GameStateManager {
     if (practice) {
       this.checkpoint();
       this.practice = {
+        magic: this.magic,
         economy: this.economy,
         builder: this.builder,
         army: this.army,
@@ -315,6 +408,7 @@ export class GameStateManager {
       this.tilt = new TiltSystem();
       this.recovery = new BallRecoverySystem();
       this.economy.data.launchState = "ready";
+      this.bindMagic();
     }
     const error = this.army.startBattle(
       scenario,
@@ -339,6 +433,7 @@ export class GameStateManager {
     this.tilt = p.tilt;
     this.recovery = p.recovery;
     this.time = p.time;
+    this.magic = p.magic;
     this.practice = undefined;
     this.accumulator = 0;
     this.bindPhysics();
@@ -410,7 +505,8 @@ export class GameStateManager {
     this.testBall?.dispose();
     this.testBall = undefined;
   }
-  private buildingHit(id: string, speed: number) {
+  private buildingHit(id: string, speed: number, ball = this.physics.ball) {
+    if (!(this.magic?.balls?.valid(ball, this.time) ?? true)) return;
     if (this.war) {
       const valid =
         this.state === "playing" &&
@@ -420,8 +516,14 @@ export class GameStateManager {
       const s = this.war.structure(id);
       if (s?.side === "enemy") {
         const before = s.hp;
-        this.war.sphereBuilding(id, speed, valid);
+        this.war.sphereBuilding(
+          id,
+          speed,
+          valid,
+          this.magic?.sphereFactor(s, ball) ?? 1,
+        );
         if (s.hp < before) {
+          this.magic?.direct(s, before - s.hp, ball);
           this.score.hits++;
           this.score.combo.hit(this.time);
           this.score.score += Math.round(100 * this.score.combo.multiplier);
@@ -454,9 +556,18 @@ export class GameStateManager {
       if (body) body.restitution = p.overloadedUntil > this.time ? 0.35 : 1;
       if (p.overloadedUntil > this.time) return;
     }
-    buildingImpulse(this.physics, b);
+    this.magic?.validHit(id, b.type, ball);
+    buildingImpulse(this.physics, b, ball);
     const c = buildingConfig(b.type)!;
-    const production = this.economy?.harvest(id, speed, true);
+    const production = this.economy?.harvest(
+      id,
+      speed,
+      true,
+      this.magic?.rewardFactor(ball, buildingConfig(b.type)?.production) ?? 1,
+    );
+    if (production && this.magic?.data.multi?.storm)
+      this.magic.data.stats.stormResources +=
+        production.amount - production.overflow;
     if (production)
       this.events.emit("production", {
         resource: production.facility.resource,
@@ -508,11 +619,14 @@ export class GameStateManager {
     this.checkpoint();
   }
   menu(): void {
+    this.sandboxExit?.();
     this.restorePractice();
     this.stopTestBall();
     if (this.builder) this.builder.active = false;
     this.finishRecord();
     this.war = undefined;
+    this.magic = undefined;
+    this.enemyMagic = undefined;
     this.physics.dispose();
     this.physics = new PinballPhysics();
     this.bindPhysics();
@@ -618,8 +732,11 @@ export class GameStateManager {
     if (this.war && this.state === "relaunch") {
       const ms = Math.max(0, Math.min(frameMs, PHYSICS.maxFrameMs));
       this.time += ms;
-      if (this.time >= this.war.data.relaunchGrace)
+      if (this.time >= this.war.data.relaunchGrace) {
+        this.magic?.tick(ms / 1000);
+        this.enemyMagic?.tick(ms / 1000);
         this.war.tick(ms / 1000, this.time);
+      }
       return;
     }
     if (this.state !== "playing") return;
@@ -636,16 +753,22 @@ export class GameStateManager {
       this.score.combo.tick(this.time);
       this.tilt.update(dt);
       this.economy?.tick(this.time);
-      const beforeBall = this.physics.ball
-        ? { ...this.physics.ball.position }
-        : undefined;
+      const beforeBalls = this.physics.balls.map((ball) => ({
+        ball,
+        position: { ...ball.position },
+      }));
       this.physics.step(dt, !this.tilt.tilted);
+      this.magic?.balls?.recover(dt, this.time);
       const recovered = this.recovery.update(this.physics, dt, this.time);
       if (recovered) {
         if (recovered === "return") {
-          this.physics.spawn();
+          if (this.physics.balls.length > 1)
+            this.physics.removeSphere(this.physics.ball!);
+          else this.physics.spawn();
           if (this.economy) {
-            this.economy.data.launchState = "ready";
+            this.economy.data.launchState = this.physics.launched
+              ? "inflight"
+              : "ready";
             this.checkpoint();
           }
         }
@@ -655,16 +778,23 @@ export class GameStateManager {
           text: recovered === "return" ? ko.return : ko.recovery,
         });
       }
-      if (beforeBall && this.physics.ball)
+      for (const item of beforeBalls) {
+        if (!this.physics.balls.includes(item.ball)) continue;
+        if (this.magic) this.magic.contactBall = item.ball;
         this.army?.combat.sphere(
-          beforeBall,
-          this.physics.ball.position,
-          this.physics.ball.speed * 60,
+          item.position,
+          item.ball.position,
+          item.ball.speed * 60,
           this.time,
           this.physics.launched &&
             !this.tilt.tilted &&
-            this.time >= this.recovery.suppressUntil,
+            this.time >= this.recovery.suppressUntil &&
+            (this.magic?.balls?.valid(item.ball, this.time) ?? true),
         );
+      }
+      this.magic?.tick(dt);
+      this.enemyMagic?.tick(dt);
+      if (this.magic?.balls?.drain(this.time)) this.recovery.reset();
       if (this.war) this.war.tick(dt, this.time);
       else this.army?.tick(dt, this.time);
       if (this.state !== "playing") break;
@@ -687,8 +817,13 @@ export class GameStateManager {
       }
     }
   }
-  private hit({ target, normalSpeed }: Contact): void {
-    this.physics.kick(target);
+  private hit({
+    target,
+    normalSpeed,
+    ball = this.physics.ball,
+  }: Contact): void {
+    this.physics.kick(target, ball);
+    if (!(this.magic?.balls?.valid(ball, this.time) ?? true)) return;
     const result = this.score.hit(
       target,
       this.time,
@@ -698,9 +833,18 @@ export class GameStateManager {
     );
     if (!result) return;
     this.war?.friendlyHit(target.id);
+    this.magic?.validHit(target.id, target.kind, ball);
     this.army?.hit(target.id, this.time, normalSpeed, true);
     this.syncEconomy();
-    const production = this.economy?.harvest(target.id, normalSpeed, true);
+    const production = this.economy?.harvest(
+      target.id,
+      normalSpeed,
+      true,
+      this.magic?.rewardFactor(ball, target.kind) ?? 1,
+    );
+    if (production && this.magic?.data.multi?.storm)
+      this.magic.data.stats.stormResources +=
+        production.amount - production.overflow;
     if (production)
       this.events.emit("production", {
         resource: production.facility.resource,
@@ -724,6 +868,7 @@ export class GameStateManager {
       if (this.army)
         this.army.data.morale = Math.min(100, this.army.data.morale + 4);
       this.economy?.royal();
+      this.magic?.royal();
       this.events.emit("royal", { x: target.x, y: target.y, points: 3000 });
     }
     if (this.economy) this.checkpoint();
@@ -769,6 +914,8 @@ export class GameStateManager {
     if (this.remaining <= 0) {
       this.finishRecord();
       this.war = undefined;
+      this.magic = undefined;
+      this.enemyMagic = undefined;
       this.setState("over");
     } else {
       this.respawnAt = this.time + 1100;
@@ -801,6 +948,7 @@ export class GameStateManager {
     });
   }
   dispose(): void {
+    this.sandboxExit?.();
     this.restorePractice();
     this.stopTestBall();
     this.physics.dispose();

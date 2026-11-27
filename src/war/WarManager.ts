@@ -227,6 +227,9 @@ export class WarManager {
   onLayout: () => void = () => {};
   onEnd: () => void = () => {};
   onSound: (kind: string) => void = () => {};
+  onHarvest: (target: string) => void = () => {};
+  damageFilter: (s: Structure, amount: number) => number = (_s, amount) =>
+    amount;
   canMaterialize: (x: number, y: number, type: string) => boolean = () => true;
   private accumulator = 0;
   private nextSave = 0;
@@ -590,7 +593,10 @@ export class WarManager {
     let damage = (raw * 100) / (100 + s.armor * 2);
     if (s.castle) damage *= 1 - this.protection(s.side);
     if (this.finalOffensive) damage *= 1.2;
-    const actual = Math.min(s.hp, Math.max(1, Math.round(damage)));
+    const actual = Math.min(
+      s.hp,
+      Math.max(1, Math.round(this.damageFilter(s, damage))),
+    );
     s.hp -= actual;
     s.lastDamage = this.now;
     if (source === "sphere") this.data.stats.sphereBuildings += actual;
@@ -636,7 +642,7 @@ export class WarManager {
     this.checkpoint();
     return actual;
   }
-  sphereBuilding(id: string, speed: number, valid: boolean) {
+  sphereBuilding(id: string, speed: number, valid: boolean, factor = 1) {
     const s = this.structure(id);
     if (
       !valid ||
@@ -663,7 +669,7 @@ export class WarManager {
       raw *= 1.5;
       this.data.buffs.wallBreaker = 0;
     }
-    if (this.damageStructure(id, raw, "sphere", "ally")) {
+    if (this.damageStructure(id, raw * factor, "sphere", "ally")) {
       this.comboHit(
         id,
         s.type === "wall"
@@ -1099,7 +1105,8 @@ export class WarManager {
       u.state = "attacking";
       u.facing = angle + Math.PI;
       if (now < u.cooldown) return true;
-      u.cooldown = now + c.interval * 1000;
+      u.cooldown =
+        now + c.interval * 1000 * (this.army.combat.intervalFactor?.(u) ?? 1);
       const bonus =
         u.kind === "catapult" && allied && this.data.buffs.siegeMaster > now
           ? 1.25
@@ -1404,7 +1411,16 @@ export class WarManager {
       10
     )
       achievements.push("WALL BREAKER");
+    if (
+      outcome === "victory" &&
+      d.stats.minCastle <= 0.1 &&
+      p.magic &&
+      p.magic.stats.storms > 0 &&
+      !p.magic.achievements.includes("TURN THE TIDE")
+    )
+      p.magic.achievements.push("TURN THE TIDE");
     d.result = {
+      magic: p.magic ? structuredClone(p.magic.stats) : undefined,
       id: d.id,
       outcome,
       reason,

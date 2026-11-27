@@ -32,6 +32,12 @@ export class CombatManager {
   ) => boolean;
   onDamage?: (target: UnitEntity, amount: number, sphere: boolean) => void;
   onProjectileImpact?: (projectile: Projectile) => boolean;
+  movementFactor: (u: UnitEntity) => number = () => 1;
+  intervalFactor: (u: UnitEntity) => number = () => 1;
+  damageFilter: (u: UnitEntity, amount: number) => number = (_u, amount) =>
+    amount;
+  sphereFactor: (u: UnitEntity) => number = () => 1;
+  onSphereContact?: (u: UnitEntity, actual: number) => void;
   private armyFor(u: UnitEntity) {
     return u.side === "enemy" && this.opponentData
       ? this.opponentData
@@ -78,7 +84,10 @@ export class CombatManager {
     sphere = false,
   ) {
     if (target.hp <= 0 || !this.enabled()) return;
-    const actual = Math.min(target.hp, amount);
+    const actual = Math.min(
+      target.hp,
+      Math.max(0, this.damageFilter(target, amount)),
+    );
     target.hp -= actual;
     this.onDamage?.(target, actual, sphere);
     this.dirty = true;
@@ -215,7 +224,7 @@ export class CombatManager {
       if (["regroup", "retreat"].includes(this.data.command))
         speed *= 1 + (this.data.research.tactics ?? 0) * 0.1;
     }
-    const step = Math.min(d, speed * dt);
+    const step = Math.min(d, speed * dt * this.movementFactor(u));
     let x = u.x + (dx / Math.max(d, 0.001)) * step,
       y = u.y + (dy / Math.max(d, 0.001)) * step;
     for (const other of this.grid.near(u.x, u.y, 16)) {
@@ -250,7 +259,7 @@ export class CombatManager {
   }
   private fire(source: UnitEntity, target: UnitEntity, now: number) {
     const c = unitConfig(source.kind);
-    source.cooldown = now + c.interval * 1000;
+    source.cooldown = now + c.interval * 1000 * this.intervalFactor(source);
     source.state = c.heal ? "healing" : "attacking";
     let raw = attackPower(source, this.armyFor(source), now);
     if (source.kind === "knight" && source.charge) {
@@ -505,7 +514,9 @@ export class CombatManager {
               : speed < 1000
                 ? 40
                 : 60;
-      this.hurt(enemy, amount, undefined, true);
+      const before = enemy.hp;
+      this.hurt(enemy, amount * this.sphereFactor(enemy), undefined, true);
+      this.onSphereContact?.(enemy, before - enemy.hp);
       if (speed >= 700) enemy.stun = now + 300;
       const length = Math.sqrt(l2),
         p = { x: enemy.x + (dx / length) * 5, y: enemy.y + (dy / length) * 5 };

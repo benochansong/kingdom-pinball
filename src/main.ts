@@ -1,3 +1,5 @@
+import { MagicUI } from "./ui/MagicUI";
+import "./magic.css";
 import Phaser from "phaser";
 import { createWarLab, mountWarLab } from "./dev/WarLab";
 import "./style.css";
@@ -34,6 +36,7 @@ const economyUI = new EconomyUI(ui, model);
 const buildUI = new BuildUI(ui, model);
 const armyUI = new ArmyUI(ui, model);
 const warUI = new WarUI(ui, model);
+const magicUI = new MagicUI(ui, model);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -67,6 +70,7 @@ const controlCodes = [
 window.addEventListener(
   "keydown",
   (event) => {
+    if (magicUI.handleKey(event)) return;
     if (warUI.handleKey(event)) return;
     if (buildUI.handleKey(event)) return;
     if (armyUI.handleKey(event)) return;
@@ -178,6 +182,7 @@ if (import.meta.hot)
     economyUI.dispose();
     buildUI.dispose();
     armyUI.dispose();
+    magicUI.dispose();
     warUI.dispose();
     disposeLab?.();
     ui.dispose();

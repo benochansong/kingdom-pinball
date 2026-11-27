@@ -38,6 +38,7 @@ export function attackPower(u: UnitEntity, a: ArmyData, now: number): number {
     const bonus =
       (a.buffs.iron > now ? 0.15 : 0) + (a.buffs.offensive > now ? 0.15 : 0);
     p *= 1 + Math.min(0.3, bonus);
+    if(a.buffs.magicStorm>now)p*=1.1;
     if (a.formation === "assault") p *= 1.1;
     if (a.formation === "siege" && u.kind === "catapult") p *= 1.1;
   }

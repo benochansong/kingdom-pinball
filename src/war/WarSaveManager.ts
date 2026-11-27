@@ -1,3 +1,4 @@
+import { sanitizeMagic } from "../magic/MagicSave";
 import type { StorageLike } from "../systems/SaveManager";
 import { sanitizeEconomy } from "../economy/EconomySaveManager";
 import { freshBuildings, freshProduction } from "../building/types";
@@ -358,6 +359,9 @@ export function sanitizeWar(raw: unknown): WarData | null {
       research: n(r.result.research),
       hits: n(r.result.hits),
       combo: n(r.result.combo),
+      magic: r.result.magic
+        ? sanitizeMagic({ stats: r.result.magic }).stats
+        : undefined,
       lossesBall: n(r.result.lossesBall),
       survival: n(r.result.survival),
       rank: n(r.result.rank, 1, 5, 1),

@@ -67,7 +67,7 @@ export class WarUI {
         )
         .join(
           "",
-        )}<button data-action="war:panel:repair">수리</button><button data-action="war:panel:build">빠른 건설</button><button data-action="war:panel:overview">전쟁 현황 V</button></nav>`,
+        )}<button data-action="war:panel:repair">수리</button><button data-action="war:panel:build">빠른 건설</button><button data-action="war:panel:overview">전쟁 현황 L</button></nav>`,
     );
     ui.root
       .querySelector(".left-panel")!
@@ -109,7 +109,7 @@ export class WarUI {
         );
       return true;
     }
-    if (e.code === "KeyV") {
+    if (e.code === "KeyL") {
       e.preventDefault();
       if (!e.repeat) this.action("war:panel:overview");
       return true;
@@ -388,7 +388,7 @@ export class WarUI {
     this.ui.close(false);
     this.ui.open(
       `${r.outcome.toUpperCase()} · 전쟁 성과 ${r.grade}`,
-      `<p>${esc(r.name)} / ${ENEMIES[r.enemy].name} · ${r.difficulty} · ${r.type}</p><p>${esc(r.reason)} · ${Math.floor(r.seconds / 60)}분 ${r.seconds % 60}초</p><div class="results-grid"><div>아군 왕궁<b>${Math.ceil(r.castle)}</b></div><div>적 왕궁<b>${Math.ceil(r.enemyCastle)}</b></div><div>생산 / 생존 / 손실<b>${r.units} / ${r.survivors} / ${r.losses}</b></div><div>적 처치 / 건물 파괴<b>${r.stats.kills} / ${r.stats.destroyed}</b></div><div>스피어 병력 / 건물 피해<b>${Math.round(r.stats.sphereUnits)} / ${Math.round(r.stats.sphereBuildings)}</b></div><div>전쟁 콤보 / 연구<b>${r.stats.combos} / ${r.research}</b></div></div><p>생산 자원: ${cost(r.produced)}<br>소비 자원: ${cost(r.spent)}<br>수리 비용: ${cost(r.stats.repairs)}</p><p>건설 ${r.stats.built} · 강화 ${r.stats.upgrades} · 손실 시설 ${r.stats.lostBuildings} · 성벽 파괴 ${r.stats.walls}<br>유효 타격 ${r.hits} · 최대 콤보 ${r.combo} · 공 손실 ${r.lossesBall} · 평균 생존 ${r.survival.toFixed(1)}초<br>최대 군사력 ${r.stats.maxPower} · 발전 등급 ${r.rank} · 최종 전략 ${WAR_ORDERS[r.style as WarOrder] ?? esc(r.style)}</p><p>${r.achievements.map(esc).join(" · ") || "획득 업적 없음"}</p><button class="primary" data-action="war:setup">새로운 전쟁</button><button data-action="war:history">전쟁 기록</button><button data-action="war:menu">메인 메뉴</button>`,
+      `<p>${esc(r.name)} / ${ENEMIES[r.enemy].name} · ${r.difficulty} · ${r.type}</p><p>${esc(r.reason)} · ${Math.floor(r.seconds / 60)}분 ${r.seconds % 60}초</p><div class="results-grid"><div>아군 왕궁<b>${Math.ceil(r.castle)}</b></div><div>적 왕궁<b>${Math.ceil(r.enemyCastle)}</b></div><div>생산 / 생존 / 손실<b>${r.units} / ${r.survivors} / ${r.losses}</b></div><div>적 처치 / 건물 파괴<b>${r.stats.kills} / ${r.stats.destroyed}</b></div><div>스피어 병력 / 건물 피해<b>${Math.round(r.stats.sphereUnits)} / ${Math.round(r.stats.sphereBuildings)}</b></div><div>전쟁 콤보 / 연구<b>${r.stats.combos} / ${r.research}</b></div></div><p>생산 자원: ${cost(r.produced)}<br>소비 자원: ${cost(r.spent)}<br>수리 비용: ${cost(r.stats.repairs)}</p><p>건설 ${r.stats.built} · 강화 ${r.stats.upgrades} · 손실 시설 ${r.stats.lostBuildings} · 성벽 파괴 ${r.stats.walls}<br>유효 타격 ${r.hits} · 최대 콤보 ${r.combo} · 공 손실 ${r.lossesBall} · 평균 생존 ${r.survival.toFixed(1)}초<br>최대 군사력 ${r.stats.maxPower} · 발전 등급 ${r.rank} · 최종 전략 ${WAR_ORDERS[r.style as WarOrder] ?? esc(r.style)}</p><p>${r.magic?`마법 피해 ${Math.round(Object.values(r.magic.damage).reduce((a,b)=>a+(b??0),0))} · 회복 ${Math.round(r.magic.healing)} · 보호 ${Math.round(r.magic.shield)} · 멀티볼 ${r.magic.multiballs} · STORM ${r.magic.storms}`:""}</p><p>${r.achievements.map(esc).join(" · ") || "획득 업적 없음"}</p><button class="primary" data-action="war:setup">새로운 전쟁</button><button data-action="war:history">전쟁 기록</button><button data-action="war:menu">메인 메뉴</button>`,
     );
   }
   render() {
@@ -435,7 +435,7 @@ export class WarUI {
         )
         .join(
           "",
-        )}<button data-action="war:panel:repair">왕국 수리</button><button data-action="war:panel:overview">전쟁 지휘소 V</button>${!d.tutorialDone ? `<aside class="army-help"><b>전쟁 안내 ${d.tutorial + 1}/9</b><p>${WAR_TUTORIAL[d.tutorial]}</p><button data-action="war:tutorial:skip">건너뛰기</button></aside>` : ""}`;
+        )}<button data-action="war:panel:repair">왕국 수리</button><button data-action="war:panel:overview">전쟁 지휘소 L</button>${!d.tutorialDone ? `<aside class="army-help"><b>전쟁 안내 ${d.tutorial + 1}/9</b><p>${WAR_TUTORIAL[d.tutorial]}</p><button data-action="war:tutorial:skip">건너뛰기</button></aside>` : ""}`;
     this.ui.root.querySelector("#war-right")!.innerHTML =
       `<div class="section-heading">${THREATS[w.threat - 1]}</div><p>${d.ai.warningAt ? `침공까지 ${Math.max(0, Math.ceil((d.ai.warningAt - w.now) / 1000))}초 · ${d.ai.lane}` : `확인된 전장 적 ${w.activeEnemies.length}기`}</p><p>${d.intel ? `${Math.floor((w.now - d.intel.at) / 1000)}초 전 정찰 · 당시 ${d.intel.count}기` : "적 예비대 · 미확인"}</p>${d.ai.commanderId ? `<p>${ENEMIES[d.options.enemy].title}${d.ai.abilityWarning ? " · 능력 발동 경고" : ""}</p>` : ""}${Object.entries(
         d.buffs,

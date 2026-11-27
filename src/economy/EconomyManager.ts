@@ -69,6 +69,7 @@ export class EconomyManager {
     target: string,
     normalSpeed: number,
     valid: boolean,
+    rewardFactor=1,
   ): ProductionResult | undefined {
     const d = this.data;
     const built = d.building?.buildings.find((b) => b.id === target);
@@ -137,7 +138,7 @@ export class EconomyManager {
       Math.max(
         1,
         Math.floor(
-          config.base * multiplier * Math.min(2, this.facilityFactor(target)),
+          config.base * multiplier * Math.min(2, this.facilityFactor(target))*Math.max(0,Math.min(2,rewardFactor)),
         ),
       ),
       "production",

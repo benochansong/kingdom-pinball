@@ -1,0 +1,42 @@
+[
+  {
+    "balls": 1,
+    "units": 50,
+    "ms": 588,
+    "seconds": 5,
+    "remainingBalls": 1,
+    "remainingUnits": 50
+  },
+  {
+    "balls": 3,
+    "units": 50,
+    "ms": 687,
+    "seconds": 5,
+    "remainingBalls": 2,
+    "remainingUnits": 50
+  },
+  {
+    "balls": 5,
+    "units": 100,
+    "ms": 1577,
+    "seconds": 5,
+    "remainingBalls": 4,
+    "remainingUnits": 100
+  },
+  {
+    "balls": 7,
+    "units": 100,
+    "ms": 1590,
+    "seconds": 5,
+    "remainingBalls": 6,
+    "remainingUnits": 100
+  },
+  {
+    "balls": 10,
+    "units": 150,
+    "ms": 3033,
+    "seconds": 5,
+    "remainingBalls": 9,
+    "remainingUnits": 139
+  }
+]

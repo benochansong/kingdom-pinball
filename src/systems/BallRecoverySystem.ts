@@ -17,8 +17,9 @@ export class BallRecoverySystem {
     physics: PinballPhysics,
     dt: number,
     now: number,
+    sphere=physics.ball,
   ): "impulse" | "return" | undefined {
-    const ball = physics.ball;
+    const ball = sphere;
     if (!ball || !physics.launched) {
       this.stillFor = 0;
       return;

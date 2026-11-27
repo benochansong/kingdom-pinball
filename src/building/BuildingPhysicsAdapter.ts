@@ -42,8 +42,9 @@ export function applyBuildings(
 export function buildingImpulse(
   physics: PinballPhysics,
   b: BuildingEntity,
+  sphere=physics.ball,
 ): void {
-  const ball = physics.ball;
+  const ball = sphere;
   if (!ball) return;
   const c = buildingConfig(b.type)!;
   const a = (b.angle * Math.PI) / 180,
@@ -83,6 +84,6 @@ export function buildingImpulse(
         (b.type === "bumper" ? 580 : b.type === "arcane" ? 630 : 410) +
         b.level * 15,
       color: 0xd6b677,
-    });
-  physics.limitSpeed();
+    },ball);
+  physics.limitSpeed(ball);
 }

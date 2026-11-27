@@ -96,6 +96,7 @@ export interface WarStats {
   maxPower: number;
 }
 export interface WarResult {
+  magic?: import("../magic/types").MagicStats;
   id: string;
   outcome: "victory" | "defeat" | "draw";
   reason: string;

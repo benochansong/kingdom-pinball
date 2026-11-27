@@ -18,6 +18,23 @@ export class AudioManager {
         if (now - this.militaryAt < 80) return;
         this.militaryAt = now;
         const hz: Record<string, number> = {
+          fire: 220,
+          ice: 1047,
+          thunder: 1245,
+          cannon: 100,
+          explosion: 65,
+          healing: 880,
+          golden: 1318,
+          phantom: 622,
+          chaos: 740,
+          storm: 55,
+          multiball: 784,
+          fireStorm: 196,
+          frostField: 988,
+          chainLightning: 1397,
+          royalShield: 698,
+          holyLight: 1175,
+          earthquake: 73,
           spawn: 523,
           hit: 155,
           heal: 880,
@@ -161,6 +178,16 @@ export class AudioManager {
         "sine",
         0.1,
         undefined,
+        0,
+        true,
+      );
+    if (this.game.magic?.data.multi?.storm)
+      this.tone(
+        65 + (this.note % 3) * 33,
+        0.22,
+        "sawtooth",
+        0.035,
+        35,
         0,
         true,
       );

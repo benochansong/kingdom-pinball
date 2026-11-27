@@ -17,7 +17,9 @@ export interface SpecialState {
   readyAt: number;
   achievements: number;
 }
+import type { MagicData } from "../magic/types";
 export interface EconomyData {
+  magic?: MagicData;
   version: 4;
   army?: ArmyData;
   building?: BuildingData;

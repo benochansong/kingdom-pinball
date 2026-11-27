@@ -1,3 +1,4 @@
+import { MagicRenderer } from "../magic/MagicRenderer";
 import Phaser from "phaser";
 import { WarRenderer } from "../war/WarRenderer";
 import { WAR_TARGETS } from "../config/war";
@@ -19,6 +20,7 @@ export class PinballScene extends Phaser.Scene {
   private artKey = "";
   private armyRenderer?: ArmyRenderer;
   private warRenderer?: WarRenderer;
+  private magicRenderer?: MagicRenderer;
   constructor(
     private model: GameStateManager,
     private audio: AudioManager,
@@ -62,6 +64,7 @@ export class PinballScene extends Phaser.Scene {
     this.moving = this.add.graphics().setDepth(15);
     this.armyRenderer = new ArmyRenderer(this, this.model);
     this.warRenderer = new WarRenderer(this, this.model);
+    this.magicRenderer = new MagicRenderer(this, this.model);
     this.shadow = this.add.ellipse(0, 0, 23, 13, 0x051c20, 0.65).setDepth(18);
     this.sphere = this.add
       .image(554, 802, "sphere")
@@ -78,6 +81,7 @@ export class PinballScene extends Phaser.Scene {
     this.effects.update(dt);
     this.armyRenderer?.draw();
     this.warRenderer?.draw();
+    this.magicRenderer?.draw();
     const economy =
       this.model.mode === "kingdom" ? this.model.economy : undefined;
     const artKey = `${this.model.war ? "war" : this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;
@@ -128,8 +132,12 @@ export class PinballScene extends Phaser.Scene {
       this.background.setTexture("table").setDisplaySize(600, 900);
     }
     const ball = this.model.displayPhysics.ball;
-    this.sphere.setVisible(!!ball);
-    this.shadow.setVisible(!!ball);
+    this.sphere.setVisible(
+      !!ball && (!this.model.magic || !!this.model.testBall),
+    );
+    this.shadow.setVisible(
+      !!ball && (!this.model.magic || !!this.model.testBall),
+    );
     if (ball) {
       this.sphere.setPosition(ball.position.x, ball.position.y);
       this.sphere.setRotation(ball.angle);
