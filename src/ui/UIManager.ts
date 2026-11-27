@@ -266,7 +266,8 @@ export class UIManager {
           if (key === "music" || key === "effects") {
             s[key] = Number(input.value) / 100;
             this.text(`${key}-output`, `${input.value}%`);
-          } else s[key] = input.checked;
+          } else if (key === "particles" || key === "shake" || key === "muted")
+            s[key] = input.checked;
           this.game.save.persist();
           this.audio.sync();
         }),

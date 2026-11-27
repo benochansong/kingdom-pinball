@@ -254,7 +254,12 @@ export class ModeBattle {
     const w = this.game.war!,
       a = w.troops(side),
       out: UnitEntity[] = [];
-    const cap = side === "ally" ? this.host.session.options.population : 60;
+    const cap =
+      side === "ally"
+        ? this.host.session.kind === "sandbox"
+          ? a.capacity
+          : this.host.session.options.population
+        : 60;
     for (
       let i = 0;
       i < Math.min(100, count) &&

@@ -10,7 +10,7 @@ export class WarRenderer {
     scene: Phaser.Scene,
     private game: GameStateManager,
   ) {
-    this.g = scene.add.graphics().setDepth(12);
+    this.g = scene.add.graphics().setDepth(13.5);
     for (let i = 0; i < 65; i++)
       this.labels.push(
         scene.add
@@ -49,42 +49,6 @@ export class WarRenderer {
         continue;
       }
       const ratio = s.hp / s.maxHp;
-      if (!s.fixed || s.side === "enemy") {
-        g.fillStyle(0x0d2522, 0.9);
-        g.lineStyle(2, color, 0.8);
-        if (s.castle) {
-          g.fillRoundedRect(s.x - 24, s.y - 24, 48, 48, 4);
-          g.strokeRoundedRect(s.x - 24, s.y - 24, 48, 48, 4);
-          g.fillStyle(color);
-          for (let k = 0; k < 4; k++)
-            g.fillRect(s.x - 24 + k * 14, s.y - 32, 7, 12);
-          g.fillStyle(0x162c29);
-          g.fillRoundedRect(s.x - 7, s.y, 14, 24, 6);
-          g.lineStyle(2, 0xe9ce86);
-          g.lineBetween(s.x, s.y - 25, s.x, s.y - 52);
-          g.fillStyle(color);
-          g.fillTriangle(s.x, s.y - 52, s.x + 22, s.y - 47, s.x, s.y - 40);
-        } else if (c.shape === "circle") {
-          g.fillCircle(s.x, s.y, c.width / 2);
-          g.strokeCircle(s.x, s.y, c.width / 2);
-          g.fillStyle(color, 0.35);
-          g.fillTriangle(s.x, s.y - 15, s.x - 13, s.y + 9, s.x + 13, s.y + 9);
-        } else {
-          g.save();
-          g.translateCanvas(s.x, s.y);
-          g.rotateCanvas((s.angle * Math.PI) / 180);
-          g.fillRoundedRect(-c.width / 2, -c.height / 2, c.width, c.height, 3);
-          g.strokeRoundedRect(
-            -c.width / 2,
-            -c.height / 2,
-            c.width,
-            c.height,
-            3,
-          );
-          g.lineBetween(-c.width / 3, 0, c.width / 3, 0);
-          g.restore();
-        }
-      }
       if (ratio < 0.75) {
         g.lineStyle(2, 0x292721);
         g.beginPath();

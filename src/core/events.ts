@@ -4,6 +4,8 @@ import type { BattleRecord } from "../army/types";
 
 /** The single extension seam for later resource, building, and battle systems. */
 export interface GameEvents {
+  presentationSkip: Record<string, never>;
+  presentationResult: { won: boolean };
   battleResult: BattleRecord;
   militarySound: { kind: string };
   construction: { kind: "build" | "invalid" | "select" | "demolish" };

@@ -1,3 +1,7 @@
+import { mountVisualLab } from "./dev/VisualLab";
+import { ModeSaveManager } from "./modes/ModeSaveManager";
+import { PresentationUI } from "./ui/PresentationUI";
+import { canonicalKey } from "./presentation/settings";
 import { TableCreatorUI } from "./ui/TableCreatorUI";
 import { GameModeManager } from "./modes/GameModeManager";
 import { ModeUI } from "./ui/ModeUI";
@@ -19,6 +23,7 @@ import "./economy.css";
 import "./building.css";
 import "./army.css";
 import "./war.css";
+import "./presentation.css";
 import { WarUI } from "./ui/WarUI";
 import { WAR_KEY } from "./war/WarSaveManager";
 import { ArmyUI } from "./ui/ArmyUI";
@@ -40,13 +45,18 @@ const warLab =
 const campaignLab =
   import.meta.env.DEV &&
   new URLSearchParams(location.search).get("campaign-lab") === "1";
-const model = campaignLab
+const visualLab =
+  import.meta.env.DEV &&
+  new URLSearchParams(location.search).get("visual-lab") === "1";
+const model = visualLab
   ? createCampaignLab()
-  : warLab
-    ? createWarLab()
-    : lab
-      ? createLabModel()
-      : new GameStateManager();
+  : campaignLab
+    ? createCampaignLab()
+    : warLab
+      ? createWarLab()
+      : lab
+        ? createLabModel()
+        : new GameStateManager();
 const audio = new AudioManager(model);
 const ui = new UIManager(model, audio);
 const economyUI = new EconomyUI(ui, model);
@@ -59,9 +69,18 @@ const campaign = new CampaignManager(
   campaignLab ? createCampaignLabSave() : undefined,
 );
 const campaignUI = new CampaignUI(ui, campaign);
-const modes = new GameModeManager(model);
+const modes = new GameModeManager(
+  model,
+  visualLab
+    ? new ModeSaveManager({
+        getItem: (k) => sessionStorage.getItem("visual-lab:" + k),
+        setItem: (k, v) => sessionStorage.setItem("visual-lab:" + k, v),
+      })
+    : undefined,
+);
 const modeUI = new ModeUI(ui, modes);
 const creatorUI = new TableCreatorUI(ui, modes);
+const presentationUI = new PresentationUI(ui, modes);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -74,6 +93,9 @@ const game = new Phaser.Game({
   fps: { target: 60 },
   scene: [new PinballScene(model, audio, () => ui.render(), campaign, modes)],
 });
+const disposeVisualLab = visualLab
+  ? mountVisualLab(modes, ui, game)
+  : undefined;
 const disposeLab = campaignLab
   ? mountCampaignLab(campaign, ui, game)
   : warLab
@@ -96,7 +118,21 @@ const controlCodes = [
 ];
 window.addEventListener(
   "keydown",
-  (event) => {
+  (nativeEvent) => {
+    const event = {
+      code: canonicalKey(
+        nativeEvent.code,
+        model.save.data.settings.presentation,
+      ),
+      key: nativeEvent.key,
+      target: nativeEvent.target,
+      repeat: nativeEvent.repeat,
+      shiftKey: nativeEvent.shiftKey,
+      ctrlKey: nativeEvent.ctrlKey,
+      altKey: nativeEvent.altKey,
+      metaKey: nativeEvent.metaKey,
+      preventDefault: () => nativeEvent.preventDefault(),
+    } as KeyboardEvent;
     if (
       modes.active &&
       modes.session.kind === "spectator" &&
@@ -155,7 +191,13 @@ window.addEventListener(
 );
 window.addEventListener(
   "keyup",
-  (event) => {
+  (nativeEvent) => {
+    const event = {
+      code: canonicalKey(
+        nativeEvent.code,
+        model.save.data.settings.presentation,
+      ),
+    };
     keys.delete(event.code);
     if (event.code === "KeyA" || event.code === "ArrowLeft")
       model.flipper("left", keys.has("KeyA") || keys.has("ArrowLeft"));
@@ -192,6 +234,17 @@ document.addEventListener(
   { signal: abort.signal },
 );
 model.events.on("state", () => keys.clear());
+document.addEventListener(
+  "fullscreenchange",
+  () => {
+    keys.clear();
+    model.flipper("left", false);
+    model.flipper("right", false);
+    model.charging = false;
+    if (!document.fullscreenElement) ui.autoPause();
+  },
+  { signal: abort.signal },
+);
 window.addEventListener("pagehide", () => model.checkpoint(), {
   signal: abort.signal,
 });
@@ -238,9 +291,11 @@ if (import.meta.hot)
     campaignUI.dispose();
     modeUI.dispose();
     creatorUI.dispose();
+    presentationUI.dispose();
     magicUI.dispose();
     warUI.dispose();
     disposeLab?.();
+    disposeVisualLab?.();
     ui.dispose();
     audio.dispose();
     model.dispose();

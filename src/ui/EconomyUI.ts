@@ -1,3 +1,4 @@
+import { resourceSVG } from './IconRegistry';
 import {
   ECONOMY,
   ECONOMY_TUTORIAL,
@@ -22,7 +23,7 @@ const costText = (cost: Cost): string =>
     .map((r) => `${RESOURCES[r].name} ${format(cost[r]!)}`)
     .join(" · ");
 const resourceIcon = (r: ResourceId): string =>
-  `<span class="resource-icon" style="color:${RESOURCES[r].color}">${RESOURCES[r].icon}</span>`;
+  `<span class="resource-icon" style="color:${RESOURCES[r].color}">${resourceSVG(r)}</span>`;
 const statusNames = {
   READY: "준비",
   ACTIVE: "생산 중",

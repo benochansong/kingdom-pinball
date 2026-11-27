@@ -399,6 +399,8 @@ export class GameModeManager {
     s.reason = reason;
     s.recorded = true;
     this.game.pause();
+    if (!this.game.war?.data.result)
+      this.game.events.emit("presentationResult", { won });
     const hp = this.game.war
       ? this.game.war.castle("ally").hp / this.game.war.castle("ally").maxHp
       : 1;

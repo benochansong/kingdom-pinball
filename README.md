@@ -12,6 +12,8 @@
 
 ## 실행
 
+PHASE 9는 지역·건물·병력 연출, 상황별 합성 음악과 채널 믹서, SIMPLE/ADVANCED HUD, 키 매핑·고대비·품질 설정을 추가합니다. [구현 및 제한](docs/PHASE9.md), [자산 권리](ASSET_LICENSES.md), [실제 렌더 측정](docs/visual-performance.json)을 참고하세요. 대규모 150기+10공은 해당 개발 환경에서 약 18FPS로 목표에 미달했습니다.
+
 Node.js 20.19+ 또는 22.12+가 필요합니다. 개발에는 Node 24를 사용했습니다.
 
 ```sh

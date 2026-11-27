@@ -182,6 +182,9 @@ export class GameStateManager {
       }
       this.syncEconomy();
       this.setState("over");
+      this.events.emit("presentationResult", {
+        won: this.war!.data.result?.outcome === "victory",
+      });
     };
     this.applyWarLayout();
     this.bindMagic();

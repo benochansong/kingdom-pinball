@@ -1,6 +1,5 @@
 import Phaser from "phaser";
 import type { GameStateManager } from "../core/GameStateManager";
-import { TARGETS } from "../data/table";
 import { ECONOMY_TARGETS, RESOURCES, type ResourceId } from "../config/economy";
 
 interface Particle {
@@ -15,12 +14,21 @@ interface Particle {
   shape?: ResourceId;
 }
 export class EffectsManager {
+  particleBudget = 120;
+  get activeParticles() {
+    return this.particles.length;
+  }
+  private free: Particle[] = [];
   private particles: Particle[] = [];
   private graphics: Phaser.GameObjects.Graphics;
   private trail: { x: number; y: number }[] = [];
-  private flashes = new Map<string, number>();
+  private flashes = new Map<
+    string,
+    { alpha: number; x: number; y: number; radius: number; color: number }
+  >();
   private disposers: (() => void)[];
   private popups = new Set<Phaser.GameObjects.Text>();
+  private freeText:Phaser.GameObjects.Text[]=[];
   constructor(
     private scene: Phaser.Scene,
     private game: GameStateManager,
@@ -30,7 +38,13 @@ export class EffectsManager {
       game.events.on("hit", (hit) => {
         const color =
           ECONOMY_TARGETS.find((t) => t.id === hit.id)?.color ?? 0xf1cc7d;
-        this.flashes.set(hit.id, 1);
+        this.flashes.set(hit.id, {
+          alpha: 1,
+          x: hit.x,
+          y: hit.y,
+          radius: 22,
+          color,
+        });
         this.burst(hit.x, hit.y, color, 15);
         if (
           game.mode === "classic" ||
@@ -39,17 +53,26 @@ export class EffectsManager {
         )
           this.popup(hit.x, hit.y - 28, `+${hit.points}`, "#ffdf91");
         if (game.save.data.settings.shake && hit.kind === "palace")
-          scene.cameras.main.shake(80, 0.0016);
+          scene.cameras.main.shake(
+            80,
+            0.0016 * game.save.data.settings.presentation.shakeAmount,
+          );
       }),
       game.events.on("royal", ({ x, y }) => {
         this.burst(x, y, 0xffdc81, 40);
         this.popup(x, y - 60, "ROYAL BONUS +3,000", "#ffe5a4");
       }),
       game.events.on("impact", ({ x, y, speed }) => {
-        if (speed > 350) this.burst(x, y, 0xaed2db, 5);
+        this.burst(
+          x,
+          y,
+          speed > 950 ? 0xffd58a : 0xaed2db,
+          speed > 950 ? 20 : speed > 650 ? 12 : speed > 350 ? 6 : 2,
+        );
       }),
       game.events.on("launch", () => this.burst(554, 800, 0x91e2ef, 16)),
       game.events.on("production", (p) => {
+        if (p.amount <= 0) return;
         const resource = RESOURCES[p.resource];
         this.burst(
           p.x,
@@ -79,25 +102,32 @@ export class EffectsManager {
     shape?: ResourceId,
   ): void {
     if (!this.game.save.data.settings.particles) return;
-    for (let i = 0; i < count && this.particles.length < 160; i++) {
+    for (
+      let i = 0;
+      i < count && this.particles.length < this.particleBudget;
+      i++
+    ) {
       const angle = Math.random() * Math.PI * 2,
         speed = 30 + Math.random() * 140;
-      this.particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        age: 0,
-        life: 0.3 + Math.random() * 0.4,
-        color,
-        size: 1 + Math.random() * 2,
-        shape,
-      });
+      const particle = this.free.pop() ?? ({} as Particle);
+      this.particles.push(
+        Object.assign(particle, {
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          age: 0,
+          life: 0.3 + Math.random() * 0.4,
+          color,
+          size: 1 + Math.random() * 2,
+          shape,
+        }),
+      );
     }
   }
   popup(x: number, y: number, label: string, color: string): void {
     if (this.popups.size >= 16) return;
-    const text = this.scene.add
+    const text = this.freeText.pop()??this.scene.add
       .text(x, y, label, {
         fontFamily: "Georgia, serif",
         fontSize: "21px",
@@ -107,6 +137,7 @@ export class EffectsManager {
       })
       .setOrigin(0.5)
       .setDepth(30);
+    text.setPosition(x,y).setText(label).setColor(color).setAlpha(1).setVisible(true);
     this.popups.add(text);
     this.scene.tweens.add({
       targets: text,
@@ -116,7 +147,7 @@ export class EffectsManager {
       ease: "Cubic.easeOut",
       onComplete: () => {
         this.popups.delete(text);
-        text.destroy();
+        text.setVisible(false);this.freeText.push(text);
       },
     });
   }
@@ -149,6 +180,7 @@ export class EffectsManager {
       p.y += p.vy * dt;
       p.vy += 90 * dt;
       if (p.age >= p.life) {
+        if (this.free.length < 160) this.free.push(p);
         this.particles.splice(i, 1);
         continue;
       }
@@ -184,31 +216,35 @@ export class EffectsManager {
         }
       }
     }
-    for (const [id, alpha] of this.flashes) {
-      const t = (this.game.mode === "kingdom" ? ECONOMY_TARGETS : TARGETS).find(
-        (t) => t.id === id,
+    for (const [id, t] of this.flashes) {
+      g.lineStyle(
+        3,
+        t.color,
+        t.alpha *
+          (this.game.save.data.settings.presentation.reduceFlash ? 0.6 : 1),
       );
-      if (t) {
-        g.lineStyle(3, t.color, alpha);
-        g.strokeCircle(t.x, t.y, t.radius + 6 + (1 - alpha) * 14);
-      }
-      if (alpha < 0) this.flashes.delete(id);
-      else this.flashes.set(id, alpha - dt * 2.7);
+      g.strokeCircle(t.x, t.y, t.radius + 6 + (1 - t.alpha) * 14);
+      if (t.alpha < 0) this.flashes.delete(id);
+      else t.alpha -= dt * 2.7;
     }
   }
   clear(): void {
     this.trail = [];
+    this.free.push(
+      ...this.particles.slice(0, Math.max(0, 160 - this.free.length)),
+    );
     this.particles = [];
     this.flashes.clear();
     this.popups.forEach((p) => {
       this.scene.tweens.killTweensOf(p);
-      p.destroy();
+      p.setVisible(false);this.freeText.push(p);
     });
     this.popups.clear();
   }
   dispose(): void {
     this.disposers.forEach((fn) => fn());
     this.clear();
+    this.freeText.forEach(t=>t.destroy());this.freeText=[];
     this.graphics.destroy();
   }
 }

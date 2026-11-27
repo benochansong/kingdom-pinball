@@ -55,6 +55,10 @@ export class MagicRenderer {
         )
         .setAlpha(i ? 0.82 : 1);
       v.label.setPosition(p.x, p.y).setText(c.glyph);
+      v.label.setVisible(
+        this.game.save.data.settings.presentation.symbols ||
+          state.type !== "steel",
+      );
       if (this.game.state === "playing") v.trail.push({ ...p });
       if (v.trail.length > 6) v.trail.shift();
       if (this.game.save.data.settings.particles)
@@ -64,7 +68,30 @@ export class MagicRenderer {
             .fillCircle(t.x, t.y, 4 + j * 0.7);
       this.ink
         .lineStyle(i ? 1 : 2, i ? c.color : 0xffffff, 0.85)
-        .strokeCircle(p.x, p.y, i ? 11 : 14);
+        .strokeCircle(
+          p.x,
+          p.y,
+          i ? 11 : this.game.save.data.settings.presentation.outline ? 14 : 12,
+        );
+      if (state.type === "fire")
+        this.ink
+          .fillStyle(c.color, 0.6)
+          .fillTriangle(p.x - 5, p.y + 6, p.x + 5, p.y + 6, p.x, p.y + 14);
+      if (state.type === "ice")
+        this.ink
+          .lineStyle(1, 0xf0fbff, 0.8)
+          .strokeRect(p.x - 7, p.y - 7, 14, 14);
+      if (state.type === "thunder")
+        this.ink
+          .lineStyle(1, 0xd2c5ff, 0.8)
+          .lineBetween(p.x - 14, p.y - 5, p.x - 10, p.y + 4)
+          .lineBetween(p.x - 10, p.y + 4, p.x - 15, p.y + 7);
+      if (state.type === "healing")
+        this.ink
+          .lineStyle(2, 0xedffba, 0.8)
+          .lineBetween(p.x - 5, p.y, p.x + 5, p.y)
+          .lineBetween(p.x, p.y - 5, p.x, p.y + 5);
+      v.image.setAlpha(state.type === "phantom" ? 0.65 : i ? 0.88 : 1);
       if (state.type === "explosion")
         this.ink.lineStyle(2, 0xff6655).strokeCircle(p.x, p.y, 15 + state.hits);
     }
@@ -93,7 +120,22 @@ export class MagicRenderer {
         const color =
           e.type === "warning"
             ? 0xff6655
-            : (this.palette?.().magic ?? 0xd8c8ff);
+            : ((
+                {
+                  fire: 0xff9d55,
+                  fireStorm: 0xff9d55,
+                  ice: 0xb0e5ff,
+                  frostField: 0xb0e5ff,
+                  thunder: 0xcbb4ff,
+                  chainLightning: 0xcbb4ff,
+                  healing: 0xb2f4b1,
+                  holyLight: 0xf8e9ab,
+                  earthquake: 0xc6a182,
+                  explosion: 0xffbf7e,
+                } as Record<string, number>
+              )[e.type] ??
+              this.palette?.().magic ??
+              0xd8c8ff);
         this.ink.lineStyle(
           2,
           color,

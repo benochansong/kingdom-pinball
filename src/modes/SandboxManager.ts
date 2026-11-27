@@ -22,6 +22,11 @@ export class SandboxManager {
       w = g.war!,
       s = () => this.settings;
     this.battle.beforePhysics = (dt) => this.physics.beforeStep(dt);
+    const locked = g.magic!.locked.bind(g.magic!);
+    g.magic!.locked = (id) =>
+      s().allMagic && MAGIC_RESEARCH.some((r) => r.id === id)
+        ? null
+        : locked(id);
     const ai = w.ai.update.bind(w.ai);
     w.ai.update = (...args) => {
       if (s().ai && s().enemyKingdom) ai(...args);

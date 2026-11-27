@@ -376,7 +376,21 @@ export class ModeUI {
               .filter(([id]) => MODE_CATALOG.some((c) => c.id === id))
               .sort((a, b) => b[1] - a[1])[0]?.[0],
         )?.name ?? "SURVIVAL",
-      )}</p><p>캠페인과 각 도전은 별도로 저장됩니다. 자유 실험은 경쟁 기록에 포함되지 않습니다.</p><div class="mode-grid">${MODE_CATALOG.map((c) => `<article class="mode-card"><span class="eyebrow">${c.group}</span><h3>${c.crest} ${c.name}</h3><p>${c.description}</p><small>${c.minutes} · 난이도 ${c.difficulty}</small>${button(`setup:${c.id}`, "시작", "primary")}${button(`resume:${c.id}`, "계속")}${button(`history:${c.id}`, "기록")}</article>`).join("")}</div><div class="mode-links"><button data-action="campaign:slots">캠페인 계속</button><button data-action="campaign:new">새 캠페인 / NG+</button><button data-action="new-kingdom">왕국 발전</button><button data-action="war:setup">왕국 전쟁</button><button data-action="start">클래식 핀볼</button><button data-action="tutorial">기본 훈련</button><button data-action="army:training">군사 훈련</button><button data-action="magic:training">마법 훈련</button>${button("profile", `프로필 · ${escapeHTML(m.profile.name)}`)}</div>`,
+      )}</p><p>캠페인과 각 도전은 별도로 저장됩니다. 자유 실험은 경쟁 기록에 포함되지 않습니다.</p><div class="mode-grid">${MODE_CATALOG.map(
+        (c, i) => {
+          const saved =
+              m.active && m.session.kind === c.id
+                ? m.bucket
+                : m.saves.load(c.id),
+            resume =
+              saved.session &&
+              ["playing", "reward", "route"].includes(saved.session.status),
+            record = saved.records[0];
+          return `<article class="mode-card"><svg class="mode-art" viewBox="0 0 220 55" aria-hidden="true"><path d="M15 48H205M30 48V24h8V14h12v10h8V48M162 48V24h8V14h12v10h8V48" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="110" cy="28" r="${12 + (i % 3) * 3}" fill="none" stroke="currentColor"/><path d="m100 28 10-12 10 12-10 12Z" fill="currentColor" opacity=".45"/></svg><span class="eyebrow">${c.group}</span><h3>${c.crest} ${c.name}</h3><p>${c.description}</p><small>${c.minutes} · 난이도 ${c.difficulty}</small><p class="tiny">${record ? `최근 ${escapeHTML(record.grade)} · ${record.score.toLocaleString()}점` : "첫 기록에 도전하세요."}</p>${button(`setup:${c.id}`, "시작", "primary")}<button data-action="mode:resume:${c.id}" ${resume ? "" : 'disabled title="저장된 진행이 없습니다"'}>${resume ? "계속" : "저장 없음"}</button>${button(`history:${c.id}`, "기록")}</article>`;
+        },
+      ).join(
+        "",
+      )}</div><div class="mode-links"><button data-action="campaign:slots">캠페인 계속</button><button data-action="campaign:new">새 캠페인 / NG+</button><button data-action="new-kingdom">왕국 발전</button><button data-action="war:setup">왕국 전쟁</button><button data-action="start">클래식 핀볼</button><button data-action="tutorial">기본 훈련</button><button data-action="army:training">군사 훈련</button><button data-action="magic:training">마법 훈련</button>${button("profile", `프로필 · ${escapeHTML(m.profile.name)}`)}</div>`,
     );
   }
   setup(kind: ModeId) {

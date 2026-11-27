@@ -1,3 +1,4 @@
+import { worldTerrainSVG } from './IconRegistry';
 import type { UIManager } from "./UIManager";
 import type { CampaignManager } from "../campaign/CampaignManager";
 import {
@@ -495,7 +496,7 @@ export class CampaignUI {
       )
       .join(
         "",
-      )}<div class="campaign-map-grid"><div><div class="world-controls"><span>지도를 드래그해서 이동</span><button aria-label="지도 축소" data-action="campaign:zoom:out">−</button><button aria-label="지도 확대" data-action="campaign:zoom:in">＋</button></div><svg class="world-viewport" viewBox="0 0 900 650" aria-label="여덟 왕국 지도"><defs><pattern id="map-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#799589" stroke-opacity=".13"/></pattern><radialGradient id="land"><stop stop-color="#435a48"/><stop offset="1" stop-color="#1e3433"/></radialGradient></defs><rect width="900" height="650" fill="#10272b"/><rect width="900" height="650" fill="url(#map-grid)"/><g id="world-regions"><path d="M 105 125 L 180 65 330 90 420 40 570 65 700 40 820 175 805 340 850 510 695 600 545 570 415 625 265 590 130 620 55 450 100 310 55 205Z" fill="url(#land)" stroke="#a5b49b" stroke-opacity=".4" stroke-width="3"/><path d="M 210 530 L155 345 390 235 160 145 625 100 730 270 645 485 430 475 210 530 M155 345 L645 485 M430 475 L390 235 M390 235 L730 270" fill="none" stroke="#d5bc77" stroke-opacity=".32" stroke-dasharray="7 8"/>${REGIONS.map(
+      )}<div class="campaign-map-grid"><div><div class="world-controls"><span>지도를 드래그해서 이동</span><button aria-label="지도 축소" data-action="campaign:zoom:out">−</button><button aria-label="지도 확대" data-action="campaign:zoom:in">＋</button></div><svg class="world-viewport" viewBox="0 0 900 650" aria-label="여덟 왕국 지도"><defs><pattern id="map-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#799589" stroke-opacity=".13"/></pattern><radialGradient id="land"><stop stop-color="#435a48"/><stop offset="1" stop-color="#1e3433"/></radialGradient></defs><rect width="900" height="650" fill="#10272b"/><rect width="900" height="650" fill="url(#map-grid)"/><g id="world-regions"><path d="M 105 125 L 180 65 330 90 420 40 570 65 700 40 820 175 805 340 850 510 695 600 545 570 415 625 265 590 130 620 55 450 100 310 55 205Z" fill="url(#land)" stroke="#a5b49b" stroke-opacity=".4" stroke-width="3"/>${worldTerrainSVG()}<path d="M 210 530 L155 345 390 235 160 145 625 100 730 270 645 485 430 475 210 530 M155 345 L645 485 M430 475 L390 235 M390 235 L730 270" fill="none" stroke="#d5bc77" stroke-opacity=".32" stroke-dasharray="7 8"/>${REGIONS.map(
       (r) => {
         const locked = regionLocked(p, r.id),
           t = p.territories[r.id],

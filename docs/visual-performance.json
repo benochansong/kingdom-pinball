@@ -1,0 +1,14 @@
+{
+  "environment": "Local in-app browser, DEV VisualLab, default 1265x712 capture, auto quality enabled; 8-second samples, not sustained performance guarantees",
+  "date": "2026-11-27",
+  "samples": [
+    {"case":"A","frames":514,"wallMs":8005.1,"fps":64.21,"p50":14,"p95":21.6,"p99":31.7,"peakBalls":1,"peakUnits":0,"destroyed":0},
+    {"case":"B","frames":469,"wallMs":8014.7,"fps":58.52,"p50":16.6,"p95":25.2,"p99":30.9,"peakBalls":1,"peakUnits":50,"destroyed":0},
+    {"case":"C","frames":512,"wallMs":8002.7,"fps":63.98,"p50":14.7,"p95":26,"p99":31.9,"peakBalls":1,"peakUnits":120,"destroyed":0},
+    {"case":"D","frames":446,"wallMs":8001.8,"fps":55.74,"p50":16.3,"p95":30.6,"p99":37.6,"peakBalls":7,"peakUnits":0,"destroyed":0},
+    {"case":"E","frames":315,"wallMs":8007,"fps":39.34,"p50":24.7,"p95":40.7,"p99":47.6,"peakBalls":10,"peakUnits":0,"destroyed":0},
+    {"case":"F","frames":146,"wallMs":8011.2,"fps":18.22,"p50":49.5,"p95":93.8,"p99":113.9,"peakBalls":10,"peakUnits":150,"destroyed":0},
+    {"case":"G","frames":335,"wallMs":8007.6,"fps":41.84,"p50":21.2,"p95":44.5,"p99":81.3,"peakBalls":1,"peakUnits":40,"destroyed":11},
+    {"case":"H","frames":375,"wallMs":8003.4,"fps":46.86,"p50":20.5,"p95":33.2,"p99":44.8,"peakBalls":1,"peakUnits":8,"destroyed":0}
+  ]
+}

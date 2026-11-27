@@ -1,4 +1,10 @@
+import {
+  defaultPresentation,
+  sanitizePresentation,
+  type PresentationSettings,
+} from "../presentation/settings";
 export interface Settings {
+  presentation: PresentationSettings;
   music: number;
   effects: number;
   particles: boolean;
@@ -37,6 +43,7 @@ const defaults = (): SaveData => ({
   tutorialDone: false,
   recent: [],
   settings: {
+    presentation: defaultPresentation(),
     music: 0.3,
     effects: 0.65,
     particles: true,
@@ -93,6 +100,7 @@ export class SaveManager {
               }))
           : [],
         settings: {
+          presentation: sanitizePresentation(settings.presentation),
           music: number(settings.music, 0.3, 1),
           effects: number(settings.effects, 0.65, 1),
           particles: settings.particles !== false,

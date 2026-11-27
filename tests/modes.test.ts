@@ -86,6 +86,11 @@ describe("Isolated game modes", () => {
     m.sandbox!.settings.allMagic = true;
     m.sandbox!.applyMagic();
     expect(g.magic!.data.research.chaos).toBe(3);
+    expect(g.magic!.locked("multiball")).toBeNull();
+    g.chargeStart();
+    g.charge = 0.8;
+    g.chargeRelease();
+    expect(g.magic!.multiball(false)).toBeNull();
     const a = m.battle.spawn("swordsman", 1, "ally")[0],
       hp = a.hp;
     g.war!.army.combat.hurt(a, 100);
@@ -157,4 +162,3 @@ describe("Isolated game modes", () => {
     m.game.dispose();
   });
 });
-

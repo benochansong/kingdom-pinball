@@ -1,0 +1,451 @@
+/* Royal metal, warm parchment and readable operational typography. */
+#app {
+  --ui-scale: 1;
+  --text-scale: 1;
+  --panel: #101e24;
+  --dim: #a4b5b5;
+  --gold: #e5c68b;
+}
+#app p,
+#app label,
+#app button {
+  font-size: calc(13px * var(--text-scale));
+}
+#app button {
+  border-radius: 6px;
+  min-height: 36px;
+  padding: calc(7px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  background: linear-gradient(160deg, #293b3d, #14282b);
+  box-shadow: inset 0 1px #ffffff0b;
+}
+#app button.primary {
+  background: linear-gradient(150deg, #e7cc91, #b48e4e);
+  color: #152a2b;
+  border-color: #ffdf9e;
+  font-weight: 700;
+}
+#app button:focus-visible {
+  outline: 3px solid #b8ecff;
+}
+#app button:disabled {
+  opacity: 0.55;
+}
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.top-actions button {
+  white-space: nowrap;
+}
+#focus-objective {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: #f6dca4;
+  padding: 8px 10px;
+  border-left: 2px solid #c7a264;
+  background: #0c1e24;
+  margin-bottom: 6px;
+}
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.settings-tabs fieldset {
+  min-width: 0;
+  border: 1px solid #d4bb7b40;
+  border-radius: 8px;
+  padding: 16px;
+}
+.settings-tabs legend {
+  color: #e7cc94;
+}
+.settings-tabs select,
+.settings-tabs input[readonly] {
+  max-width: 160px;
+  padding: 7px;
+  color: #ecdfbf;
+  background: #152c32;
+  border: 1px solid #63766f;
+}
+.settings-tabs input[type="range"] {
+  width: 100%;
+}
+#app[data-view="simple"] .game-layout:not([data-state="menu"]) {
+  grid-template-columns: minmax(0, 640px);
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 14px;
+}
+#app[data-view="simple"][data-building="false"]
+  .game-layout:not([data-state="menu"])
+  > .left-panel,
+#app[data-view="simple"][data-building="false"]
+  .game-layout:not([data-state="menu"])
+  > .right-panel {
+  display: none;
+}
+#app[data-view="simple"] .game-layout:not([data-state="menu"]) .table-section {
+  width: 100%;
+  max-width: min(600px, calc((100dvh - 250px) * 0.6667));
+  min-width: 280px;
+  margin: auto;
+}
+#app[data-view="simple"][data-building="true"] .game-layout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+#app[data-building="true"] .left-panel,
+#app[data-building="true"] .right-panel {
+  width: 260px;
+  max-width: 100%;
+  display: block;
+}
+#app[data-flat="true"] #army-hud,
+#app[data-flat="true"] #war-hud,
+#app[data-flat="true"] .economy-nav,
+#app[data-flat="true"] .war-commands,
+#app[data-flat="true"] .army-commands,
+#app[data-flat="true"] .resource-hud {
+  display: none !important;
+}
+#app[data-flat="true"] .table-heading {
+  display: none;
+}
+#app[data-flat="true"] .table-section {
+  max-width: min(600px, calc((100dvh - 180px) * 0.6667)) !important;
+}
+#app[data-view="simple"] .table-heading {
+  display: none;
+}
+#app[data-view="simple"] .scoreboard {
+  height: 42px;
+  padding: 5px 12px;
+}
+#app[data-view="simple"] .launcher-bar {
+  padding: 5px 10px;
+  min-height: 32px;
+}
+#app[data-view="simple"] #war-hud {
+  padding: 7px 12px;
+  margin: 4px auto;
+  font-size: 11px;
+}
+#app[data-view="simple"] .resource-hud {
+  padding: 6px 12px;
+  margin: 0 auto;
+}
+#app[data-view="simple"] #army-hud {
+  padding: 4px 12px;
+}
+#app[data-view="simple"] .economy-nav,
+#app[data-view="simple"] .war-commands,
+#app[data-view="simple"] .army-commands {
+  gap: 3px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+#app[data-view="simple"] .economy-nav small {
+  display: none;
+}
+#app[data-view="simple"] .economy-nav button,
+#app[data-view="simple"] .war-commands button {
+  padding: 4px 7px;
+  min-height: 28px;
+  font-size: 11px;
+}
+#app[data-contrast="true"] {
+  --dim: #e1e8df;
+  --border: #f2d39b99;
+  color: #fff;
+  background: #061016;
+}
+#app[data-contrast="true"] button {
+  border-color: #b4cdd4;
+}
+#app[data-contrast="true"] .tiny,
+#app[data-contrast="true"] .muted {
+  color: #e0e8e3;
+}
+.welcome {
+  position: relative;
+}
+.welcome h1 {
+  text-shadow:
+    0 4px 1px #070d16,
+    0 0 40px #d8ad6b20;
+}
+.welcome:before {
+  content: "";
+  position: absolute;
+  inset: -10px -20px;
+  z-index: -1;
+  background: radial-gradient(ellipse at 40% 30%, #b18a4420, transparent 60%);
+}
+.mode-cards > article,
+.mode-card {
+  background: linear-gradient(145deg, #1c363b, #101d24);
+  border: 1px solid #d3b67944;
+  border-radius: 10px;
+}
+.mode-card h3 {
+  font-family: Georgia, serif;
+  letter-spacing: 0.06em;
+}
+.resource-earned {
+  animation: resource-earned 0.5s ease-out;
+}
+@keyframes resource-earned {
+  50% {
+    color: #fff1b5;
+    text-shadow: 0 0 10px #d7bf70;
+  }
+}
+.performance-overlay {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  background: #06121ee6;
+  color: #c0f9df;
+  padding: 8px;
+  z-index: 50;
+  font: 11px monospace;
+  pointer-events: none;
+  white-space: pre;
+}
+.table-frame {
+  position: relative;
+}
+@media (max-width: 760px) {
+  .settings-tabs {
+    grid-template-columns: 1fr;
+  }
+  .topbar .edition,
+  .topbar .brand span {
+    display: none;
+  }
+  #app .topbar {
+    padding: 5px 12px;
+  }
+  .top-actions {
+    gap: 4px;
+  }
+  #app[data-view="simple"]
+    .game-layout:not([data-state="menu"])
+    .table-section {
+    max-width: min(100%, 480px);
+    min-width: 0;
+  }
+  #app .game-layout {
+    gap: 16px;
+  }
+  #app[data-flat="true"] .table-section {
+    max-width: 100% !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .resource-earned {
+    animation: none;
+  }
+  #app * {
+    scroll-behavior: auto;
+    transition: none !important;
+  }
+}
+/* Wide-screen simple HUD: keep the entire playable table between two compact docks. */
+@media (min-width: 1000px) {
+  #app[data-view="simple"]:not([data-building="true"]) {
+    position: relative;
+  }
+  #app[data-view="simple"]
+    .game-layout:not([data-state="menu"])
+    .table-section {
+    max-width: min(600px, calc((100dvh - 150px) * 0.6667));
+    min-width: 0;
+  }
+  #app[data-view="simple"][data-state="playing"] .resource-hud {
+    display: grid;
+  }
+  #app[data-view="simple"] .resource-hud {
+    position: absolute;
+    top: 68px;
+    left: 18px;
+    width: 220px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 8px;
+    z-index: 2;
+  }
+  #app[data-view="simple"] .resource-cell {
+    min-width: 0;
+    padding: 5px 0;
+    gap: 5px;
+  }
+  #app[data-view="simple"] .resource-cell b {
+    font-size: 14px;
+  }
+  #app[data-view="simple"] .resource-cell small {
+    display: none;
+  }
+  #app[data-view="simple"] #army-hud {
+    position: absolute;
+    top: 265px;
+    left: 18px;
+    width: 220px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 11px;
+  }
+  #app[data-view="simple"] #war-hud {
+    position: absolute;
+    top: 70px;
+    right: 18px;
+    width: 220px;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 12px;
+  }
+  #app[data-view="simple"] #mode-hud,
+  #app[data-view="simple"] #campaign-hud {
+    position: absolute;
+    right: 18px;
+    top: 240px;
+    width: 220px;
+    display: flex;
+    flex-wrap: wrap;
+    padding: 8px;
+    font-size: 11px;
+  }
+  #app[data-view="simple"] .economy-nav {
+    position: fixed;
+    left: 18px;
+    top: 390px;
+    width: 220px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 8px;
+    background: #11232a;
+    border: 1px solid #bca36b40;
+  }
+  #app[data-view="simple"] .army-commands {
+    position: fixed;
+    left: 18px;
+    top: 515px;
+    width: 220px;
+    display: flex;
+  }
+  #app[data-view="simple"] .war-commands {
+    position: fixed;
+    right: 18px;
+    top: 365px;
+    width: 220px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 8px;
+    background: #11232a;
+    max-height: 160px;
+    overflow: auto;
+  }
+  #app[data-view="simple"] #magic-hud {
+    position: fixed;
+    right: 18px;
+    top: 535px;
+    width: 220px;
+    max-height: calc(100dvh - 548px);
+    overflow: auto;
+    background: #11232a;
+    padding: 8px;
+    border: 1px solid #bca36b40;
+  }
+  #app[data-view="simple"] #magic-hud button {
+    padding: 5px;
+    font-size: 11px;
+  }
+  #app[data-view="simple"] #magic-hud small {
+    display: none;
+  }
+  #app[data-flat="true"] #mode-hud {
+    top: 90px;
+  }
+  #app[data-flat="true"] #magic-hud {
+    top: 300px;
+    max-height: 260px;
+  }
+  #app[data-view="simple"] .mobile-kingdom-button {
+    display: none;
+  }
+  #app[data-building="true"] .economy-nav,
+  #app[data-building="true"] .army-commands,
+  #app[data-building="true"] .war-commands,
+  #app[data-building="true"] #magic-hud {
+    position: static;
+    width: 100%;
+    max-height: none;
+  }
+}
+#app [hidden] {
+  display: none !important;
+}
+#app[data-play="menu"] .economy-only,
+#app[data-play="menu"] .war-only,
+#app[data-mode="classic"] .economy-only,
+#app[data-mode="classic"] .war-only {
+  display: none !important;
+}
+#app {
+  --lab-offset: 0px;
+}
+body:has(.military-lab) #app {
+  --lab-offset: 50px;
+}
+@media (min-width: 1000px) {
+  #app[data-view="simple"]
+    .game-layout:not([data-state="menu"])
+    .table-section {
+    max-width: min(600px, calc((100dvh - 190px - var(--lab-offset)) * 0.6667));
+  }
+  #app[data-view="simple"] #army-hud {
+    top: 300px;
+  }
+  #app[data-view="simple"] #mode-hud,
+  #app[data-view="simple"] #campaign-hud {
+    top: 270px;
+  }
+  #app[data-view="simple"] .economy-nav,
+  #app[data-view="simple"] .army-commands,
+  #app[data-view="simple"] .war-commands,
+  #app[data-view="simple"] #magic-hud {
+    position: absolute;
+  }
+  #app[data-view="simple"] .war-commands {
+    top: 380px;
+  }
+  #app[data-view="simple"] #magic-hud {
+    top: 555px;
+    max-height: calc(100dvh - 568px - var(--lab-offset));
+  }
+  #app[data-flat="true"] #mode-hud {
+    top: 90px;
+  }
+  #app[data-flat="true"] #magic-hud {
+    top: 300px;
+    max-height: 260px;
+  }
+  #app[data-flat="true"] .table-section {
+    max-width: min(
+      600px,
+      calc((100dvh - 150px - var(--lab-offset)) * 0.6667)
+    ) !important;
+  }
+  #app[data-building="true"] .economy-nav,
+  #app[data-building="true"] .army-commands,
+  #app[data-building="true"] .war-commands,
+  #app[data-building="true"] #magic-hud {
+    position: static;
+  }
+}
+.mode-art{width:100%;height:55px;color:#d0b57e;background:linear-gradient(90deg,#122029,#29423f,#122029);border-radius:6px}
+.visual-results{position:absolute;left:12px;top:44px;z-index:100;background:#1a262c;color:#dfebdc;max-width:600px}.visual-results pre{max-height:240px;overflow:auto;padding:12px}.visual-results summary{padding:4px;font-size:10px;cursor:pointer}

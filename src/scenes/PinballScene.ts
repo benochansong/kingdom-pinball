@@ -1,3 +1,4 @@
+import { WorldPresentation } from "../presentation/WorldPresentation";
 import { cosmeticColor } from "../config/profile";
 import { ModeRenderer } from "../modes/ModeRenderer";
 import type { GameModeManager } from "../modes/GameModeManager";
@@ -16,6 +17,7 @@ import { TARGETS } from "../data/table";
 import { ArmyRenderer } from "../army/ArmyRenderer";
 
 export class PinballScene extends Phaser.Scene {
+  private presentation?: WorldPresentation;
   private moving!: Phaser.GameObjects.Graphics;
   private effects!: EffectsManager;
   private sphere!: Phaser.GameObjects.Image;
@@ -105,7 +107,16 @@ export class PinballScene extends Phaser.Scene {
       .image(554, 802, "sphere")
       .setDisplaySize(34, 34)
       .setDepth(20);
-    this.events.once("shutdown", () => this.effects.dispose());
+    this.presentation = new WorldPresentation(
+      this,
+      this.model,
+      this.audio,
+      this.effects,
+    );
+    this.events.once("shutdown", () => {
+      this.effects.dispose();
+      this.presentation?.dispose();
+    });
   }
   update(_time: number, delta: number): void {
     for (
@@ -128,6 +139,7 @@ export class PinballScene extends Phaser.Scene {
     this.magicRenderer?.draw();
     this.campaignRenderer?.draw();
     this.modeRenderer?.draw();
+    this.presentation?.draw(delta);
     const economy =
       this.model.mode === "kingdom" ? this.model.economy : undefined;
     const artKey = `${this.model.war ? "war" : this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;

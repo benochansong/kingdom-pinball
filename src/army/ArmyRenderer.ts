@@ -183,8 +183,48 @@ export class ArmyRenderer {
         sprite = this.scene.add.image(0, 0, key).setDepth(17);
         this.sprites.push(sprite);
       }
-      sprite.setTexture(key).setPosition(x, y).setVisible(true);
+      const moving = ["moving", "retreating"].includes(u.state);
+      const bob = moving
+        ? Math.sin(now * (u.kind === "knight" ? 18 : 12) + u.id.length) *
+          (u.charge ? 1.6 : 0.7)
+        : 0;
+      sprite
+        .setTexture(key)
+        .setPosition(x, y + bob)
+        .setAlpha(u.state === "stunned" ? 0.7 : 1)
+        .setVisible(true);
       spriteIndex++;
+      if (u.charge && this.game.save.data.settings.particles) {
+        g.fillStyle(0xd4b78b, 0.18).fillEllipse(
+          x - Math.cos(u.facing) * 12,
+          y + 8,
+          13,
+          5,
+        );
+      }
+      for (let rank = 1; rank < u.rank; rank++) {
+        g.fillStyle(u.rank >= 4 ? 0xead397 : 0xc6dbdf).fillRect(
+          x - 8 + rank * 4,
+          y + 13,
+          2,
+          2,
+        );
+      }
+      if (u.state === "windup") {
+        g.lineStyle(
+          1,
+          u.kind === "healer" ? 0xaff2b6 : 0xe8d49b,
+          0.65,
+        ).strokeCircle(x, y, 14);
+      }
+      if (u.state === "attacking") {
+        g.lineStyle(2, 0xf4dca8, 0.8).lineBetween(
+          x + Math.cos(u.facing) * 6,
+          y + Math.sin(u.facing) * 6,
+          x + Math.cos(u.facing) * 18,
+          y + Math.sin(u.facing) * 18,
+        );
+      }
       if (u.hp < maxHp(u) || u.state === "windup") {
         g.fillStyle(0x092923);
         g.fillRect(x - 10, y - 22, 20, 3);
