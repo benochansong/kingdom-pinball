@@ -82,7 +82,7 @@ export class ReleaseUI {
         if (!el.children.length) el.hidden = true;
       });
     welcome.querySelector(".edition-note")!.textContent =
-      "v0.11.0 BETA · ONLINE BETA";
+      "v0.11.1 BETA · ONLINE BETA";
     welcome.append(welcome.querySelector(".edition-note")!);
     this.resize = new ResizeObserver((entries) => {
       for (const { target } of entries) {

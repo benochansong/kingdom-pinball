@@ -36,7 +36,7 @@ export class CustomTableManager {
     }
     w.objectiveControlled = true;
     w.data.options.preparation = 0;
-    if (!warBoard) g.configureModeTable([]);
+    if (!warBoard) g.configureModeTable([], "authored");
     g.enemyMagic = undefined;
     s.name = table.name;
     s.goal = table.amount;

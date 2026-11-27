@@ -144,6 +144,7 @@ export interface Snapshot {
     score: number;
     energyWait: number;
     launched?: boolean;
+    protection?: import("../systems/BallProtection").ProtectionData;
   };
   opponent: { balls: BallView[]; flippers: number[] };
   battlefield: {

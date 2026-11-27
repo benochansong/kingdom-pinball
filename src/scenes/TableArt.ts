@@ -1,4 +1,21 @@
 import { RAILS, TARGETS, type TargetDefinition } from "../data/table";
+import { OUTLANE_GUARDS } from "../config/pinball";
+
+export function drawOutlaneGuards(c: CanvasRenderingContext2D) {
+  for (const p of OUTLANE_GUARDS) {
+    c.beginPath();
+    c.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    c.fillStyle = "#c3a665";
+    c.fill();
+    c.lineWidth = 2;
+    c.strokeStyle = "#f6e2a4";
+    c.stroke();
+    c.beginPath();
+    c.arc(p.x, p.y, p.radius - 4, 0, Math.PI * 2);
+    c.fillStyle = "#254b42";
+    c.fill();
+  }
+}
 
 type Ctx = CanvasRenderingContext2D;
 const polygon = (
@@ -400,6 +417,7 @@ export function createTableArt(
   levels: Record<string, number> = {},
   rank = 1,
   war = false,
+  guards = true,
 ): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
@@ -485,9 +503,12 @@ export function createTableArt(
     );
   for (const rail of RAILS) {
     if (rail.sling) continue;
-    const [ax, ay] = rail.a,
-      [bx, by] = rail.b;
-    c.lineCap = "round";
+    const angle = Math.atan2(rail.b[1] - rail.a[1], rail.b[0] - rail.a[0]);
+    const ax = rail.a[0] - Math.cos(angle) * 4,
+      ay = rail.a[1] - Math.sin(angle) * 4;
+    const bx = rail.b[0] + Math.cos(angle) * 4,
+      by = rail.b[1] + Math.sin(angle) * 4;
+    c.lineCap = "butt";
     c.strokeStyle = "#071b1a88";
     c.lineWidth = rail.width + 10;
     c.beginPath();
@@ -521,6 +542,7 @@ export function createTableArt(
       c.restore();
     }
   }
+  if (guards) drawOutlaneGuards(c);
   // Brass-lined, carved slingshots.
   for (const mirrored of [false, true]) {
     c.save();
@@ -555,6 +577,20 @@ export function createTableArt(
     c.lineTo(182, 722);
     c.stroke();
     c.restore();
+  }
+  // The active rubber edges use the exact rectangles used by Matter, including asymmetric slings.
+  for (const rail of RAILS.filter((r) => r.sling)) {
+    const a = Math.atan2(rail.b[1] - rail.a[1], rail.b[0] - rail.a[0]);
+    c.lineCap = "butt";
+    c.lineWidth = rail.width;
+    c.strokeStyle = "#b8ad77";
+    c.beginPath();
+    c.moveTo(rail.a[0] - Math.cos(a) * 4, rail.a[1] - Math.sin(a) * 4);
+    c.lineTo(rail.b[0] + Math.cos(a) * 4, rail.b[1] + Math.sin(a) * 4);
+    c.stroke();
+    c.lineWidth = 3;
+    c.strokeStyle = "#eee0ac";
+    c.stroke();
   }
   if (!war) drawCastle(c, 282, 193);
   targets.forEach((t) => drawTarget(c, t));

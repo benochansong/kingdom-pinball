@@ -21,6 +21,7 @@ export interface GameEvents {
   royal: { x: number; y: number; points: number };
   drain: { remaining: number };
   launch: { power: number };
+  ballProtection: { kind: "save" | "kickback"; x: number; y: number };
   flipper: { side: "left" | "right" };
   impact: { x: number; y: number; speed: number };
   message: { text: string; tone?: "gold" | "warning" };

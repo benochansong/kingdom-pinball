@@ -14,6 +14,12 @@ export function mountReleaseLab(
   panel.innerHTML =
     '<details><summary>DEV · 공 생명주기 검증</summary><button data-release="classic">검사 클래식</button><button data-release="kingdom">검사 왕국</button><button data-release="war">검사 전쟁</button><button data-release="sandbox">검사 샌드박스</button><button data-release="drain">실제 공 하단 이동</button><button data-release="missing">물리 공 제거</button><button data-release="zero">에너지 0</button><pre aria-label="공 생명주기 로그"></pre></details>';
   document.body.append(panel);
+  panel
+    .querySelector("details")!
+    .insertAdjacentHTML(
+      "beforeend",
+      '<button data-release="launch25">실제 25% 발사 · 4초 진행</button><button data-release="step">1초 진행</button><button data-release="restore">왕국 저장 복원</button>',
+    );
   panel.style.cssText =
     "position:fixed;bottom:0;left:0;z-index:10000;background:#10251e;color:#fff;max-width:95vw;font-size:12px;max-height:45vh;overflow:auto";
   const abort = new AbortController();
@@ -36,6 +42,14 @@ export function mountReleaseLab(
         for (const b of g.physics.balls)
           Matter.Body.setPosition(b, { x: 290, y: 890 });
       if (action === "missing") g.physics.removeBall();
+      if (action === "launch25") {
+        g.chargeStart();
+        g.charge = 0.25;
+        g.chargeRelease();
+        for (let i = 0; i < 240; i++) g.update(1000 / 60);
+      }
+      if (action === "step") for (let i = 0; i < 60; i++) g.update(1000 / 60);
+      if (action === "restore") g.startKingdom(false);
       if (action === "zero" && g.economy) g.economy.data.resources.energy = 0;
     },
     { signal: abort.signal },
@@ -52,6 +66,9 @@ export function mountReleaseLab(
         remaining: g.remaining,
         energy: g.economy?.data.resources.energy,
         losses: g.economy?.data.losses,
+        gameMs: g.time,
+        protection: g.protection.data,
+        statistics: g.physics.telemetry.summary(),
         bodies: Matter.Composite.allBodies(g.physics.engine.world).length,
         events: g.ballLog.slice(-8),
       },

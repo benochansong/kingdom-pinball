@@ -1,0 +1,11 @@
+{
+  "baseline": "b0c9be4",
+  "trials": 4800,
+  "physicalOutcomeMismatches": 0,
+  "fields": [
+    "seconds",
+    "hits",
+    "bumpers"
+  ],
+  "note": "Guide-aware classification replay compared with original pre-change physical simulation."
+}

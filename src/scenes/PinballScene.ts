@@ -142,7 +142,7 @@ export class PinballScene extends Phaser.Scene {
     this.presentation?.draw(delta);
     const economy =
       this.model.mode === "kingdom" ? this.model.economy : undefined;
-    const artKey = `${this.model.war ? "war" : this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;
+    const artKey = `${this.model.physics.preset}:${this.model.war ? "war" : this.model.mode}:${economy ? FACILITIES.map((f) => economy.data.facilities[f.id].level).join("") + economy.data.rank : ""}`;
     if (
       artKey +
         (this.model.war?.data.structures
@@ -178,6 +178,7 @@ export class PinballScene extends Phaser.Scene {
         levels,
         economy?.data.rank,
         !!this.model.war,
+        this.model.physics.preset === "standard",
       );
       const texture = this.textures.get(
         "table",
@@ -244,19 +245,30 @@ export class PinballScene extends Phaser.Scene {
     g.lineBetween(544, 817 + compressed, 564, 817 + compressed);
     const gate = this.model.displayPhysics.gate;
     g.lineStyle(
-      3,
+      12,
       this.model.displayPhysics.gateClosed ? 0xd7c187 : 0x6e8d83,
       0.9,
     );
-    const angle = this.model.displayPhysics.gateClosed
-      ? gate.angle
-      : gate.angle - 1;
+    const angle = gate.angle;
     g.lineBetween(
-      480,
-      150,
-      480 + Math.cos(angle) * 54,
-      150 + Math.sin(angle) * 54,
+      gate.position.x - Math.cos(angle) * 27.5,
+      gate.position.y - Math.sin(angle) * 27.5,
+      gate.position.x + Math.cos(angle) * 27.5,
+      gate.position.y + Math.sin(angle) * 27.5,
     );
+    if (this.model.save.data.settings.presentation.debug) {
+      const telemetry = this.model.displayPhysics.telemetry;
+      g.lineStyle(2, 0x7fe9ef, 0.65);
+      const prior = new Map<number, { x: number; y: number }>();
+      for (const p of telemetry.trace) {
+        const last = prior.get(p.id);
+        if (last) g.lineBetween(last.x, last.y, p.x, p.y);
+        prior.set(p.id, p);
+      }
+      for (const c of telemetry.contacts) {
+        g.strokeCircle(c.x, c.y, 4);
+      }
+    }
     // Subtle flames, flags, and crystal halo remain independent of gameplay bodies.
     for (const x of [220, 344]) {
       const pulse = Math.sin(this.visualTime * 9 + x) * 2;

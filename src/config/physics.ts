@@ -10,7 +10,15 @@ export const PHYSICS = {
   ballRestitution: 0.64,
   airFriction: 0.00032,
   wallRestitution: 0.62,
-  launcher: { x: 554, y: 802, minSpeed: 880, maxSpeed: 1250, chargeMs: 1300 },
+  launcher: {
+    x: 554,
+    y: 802,
+    minSpeed: 1060,
+    midSpeed: 1102,
+    midPower: 0.6,
+    maxSpeed: 1250,
+    chargeMs: 1300,
+  },
   flipper: {
     length: 100,
     radius: 11,

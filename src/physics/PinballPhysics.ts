@@ -2,6 +2,8 @@ import Matter from "matter-js";
 import { COLLISION, PHYSICS } from "../config/physics";
 import { RAILS, TARGETS, type TargetDefinition } from "../data/table";
 import { FlipperController } from "./FlipperController";
+import { OUTLANE_GUARDS, SLING, GUARD_REBOUND } from "../config/pinball";
+import { PinballTelemetry } from "./PinballTelemetry";
 const { Engine, Bodies, Body, Composite, Events } = Matter;
 
 export interface Contact {
@@ -11,6 +13,7 @@ export interface Contact {
   normalSpeed: number;
 }
 export class PinballPhysics {
+  readonly telemetry = new PinballTelemetry();
   maxSpeed: number = PHYSICS.maxSpeed;
   bumperFactor = 1;
   readonly engine = Engine.create({
@@ -39,6 +42,9 @@ export class PinballPhysics {
   readonly buildingBodies = new Map<string, Matter.Body>();
   private targets = new Map<number, TargetDefinition>();
   private incoming = new Map<number, { x: number; y: number }>();
+  private slingAt = new Map<number, number>();
+  private guardAt = new Map<number, number>();
+  private guardPending: { ball: Matter.Body; x: number; y: number }[] = [];
   private nextTargets: TargetDefinition[];
   addTarget(target: TargetDefinition) {
     if (this.nextTargets.some((t) => t.id === target.id)) return;
@@ -72,8 +78,22 @@ export class PinballPhysics {
     }
   }
 
-  constructor(targets = TARGETS) {
+  constructor(
+    targets = TARGETS,
+    readonly preset: "standard" | "authored" = "standard",
+  ) {
     this.nextTargets = targets;
+    for (const post of preset === "standard" ? OUTLANE_GUARDS : [])
+      Composite.add(
+        this.engine.world,
+        Bodies.circle(post.x, post.y, post.radius, {
+          isStatic: true,
+          restitution: 0.82,
+          friction: 0.015,
+          label: "outlane-guard",
+          collisionFilter: { category: COLLISION.wall },
+        }),
+      );
     for (const rail of RAILS) {
       const dx = rail.b[0] - rail.a[0];
       const dy = rail.b[1] - rail.a[1];
@@ -133,6 +153,12 @@ export class PinballPhysics {
           const normalSpeed = Math.abs(incoming.x * n.x + incoming.y * n.y);
           if (normalSpeed > 40)
             this.onBuildingHit(other.label, normalSpeed, ball);
+          this.telemetry.contact(
+            ball,
+            other.label,
+            this.engine.timing.timestamp,
+            incoming,
+          );
           continue;
         }
         if (other.isSensor) continue;
@@ -146,18 +172,54 @@ export class PinballPhysics {
             ny = dy / d;
           const normalSpeed = Math.max(0, -(incoming.x * nx + incoming.y * ny));
           // Only approaching, meaningful contacts count. Persistent contact isn't collisionStart.
-          if (normalSpeed > 40)
+          if (normalSpeed > 40) {
+            this.telemetry.bumper(ball, target.id);
             this.onHit({ target, speed, normalSpeed, ball });
+          }
         } else {
           this.onImpact(ball.position.x, ball.position.y, speed);
-          if (other.label === "sling" && speed > 70) {
+          if (
+            other.label === "outlane-guard" &&
+            this.engine.timing.timestamp -
+              (this.guardAt.get(ball.id) ?? -Infinity) >=
+              GUARD_REBOUND.cooldownMs
+          ) {
+            const dx = ball.position.x - other.position.x,
+              dy = ball.position.y - other.position.y,
+              distance = Math.max(1, Math.hypot(dx, dy));
+            const nx = dx / distance,
+              ny = dy / distance;
+            if (-(incoming.x * nx + incoming.y * ny) > 70) {
+              this.guardAt.set(ball.id, this.engine.timing.timestamp);
+              this.guardPending.push({
+                ball,
+                x: other.position.x,
+                y: other.position.y,
+              });
+            }
+          }
+          if (
+            other.label === "sling" &&
+            speed > 70 &&
+            (this.preset === "authored" ||
+              this.engine.timing.timestamp -
+                (this.slingAt.get(ball.id) ?? -Infinity) >=
+                SLING.cooldownMs)
+          ) {
+            this.slingAt.set(ball.id, this.engine.timing.timestamp);
             const direction = ball.position.x < 288 ? 1 : -1;
             Body.setVelocity(ball, {
-              x: ball.velocity.x + direction * 3,
-              y: Math.min(ball.velocity.y, -4.5),
+              x: ball.velocity.x + direction * SLING.inward,
+              y: Math.min(ball.velocity.y, -SLING.upward),
             });
           }
         }
+        this.telemetry.contact(
+          ball,
+          other.label,
+          this.engine.timing.timestamp,
+          incoming,
+        );
       }
     });
   }
@@ -189,12 +251,19 @@ export class PinballPhysics {
   launch(power: number): void {
     if (!this.ball || this.launched) return;
     Body.setStatic(this.ball, false);
+    const charge = Math.max(0, Math.min(1, power));
+    // Spring preload lets weak plunges reach the exit without changing strong shots.
+    const { minSpeed, midSpeed, midPower, maxSpeed } = PHYSICS.launcher;
     const speed =
-      PHYSICS.launcher.minSpeed +
-      Math.max(0, Math.min(1, power)) *
-        (PHYSICS.launcher.maxSpeed - PHYSICS.launcher.minSpeed);
+      this.preset === "authored"
+        ? 880 + charge * 370
+        : charge < midPower
+          ? minSpeed + (charge / midPower) * (midSpeed - minSpeed)
+          : midSpeed +
+            ((charge - midPower) / (1 - midPower)) * (maxSpeed - midSpeed);
     Body.setVelocity(this.ball, { x: 0, y: -speed / 60 });
     this.launched = true;
+    this.telemetry.launch(this.ball, power, this.engine.timing.timestamp);
   }
   step(dt: number, flippersEnabled = true): void {
     this.left.update(dt, flippersEnabled);
@@ -202,19 +271,56 @@ export class PinballPhysics {
     for (const b of this.balls)
       this.incoming.set(b.id, { x: b.velocity.x * 60, y: b.velocity.y * 60 });
     Engine.update(this.engine, dt * 1000);
+    for (const { ball: b, x, y } of this.guardPending) {
+      const dx = b.position.x - x,
+        dy = b.position.y - y,
+        distance = Math.max(1, Math.hypot(dx, dy)),
+        nx = dx / distance,
+        ny = dy / distance;
+      const impulse = Math.max(
+        0,
+        GUARD_REBOUND.speed - (b.velocity.x * nx + b.velocity.y * ny) * 60,
+      );
+      Body.setVelocity(b, {
+        x: b.velocity.x + (nx * impulse) / 60,
+        y: b.velocity.y + (ny * impulse) / 60,
+      });
+    }
+    this.guardPending.length = 0;
     const ball = this.ball;
     if (!ball || !this.launched) return;
     for (const b of this.balls) {
-      this.left.collide(b);
-      this.right.collide(b);
+      for (const f of [this.left, this.right]) {
+        const vx = b.velocity.x,
+          vy = b.velocity.y;
+        if (
+          f.collide(b) &&
+          f.held &&
+          Math.abs(f.angularVelocity) > 0.1 &&
+          Math.hypot(vx - b.velocity.x, vy - b.velocity.y) > 0.3
+        )
+          this.telemetry.flipper(
+            b,
+            f.side,
+            f.closest(b.position).t,
+            this.engine.timing.timestamp,
+          );
+      }
       this.limitSpeed(b);
     }
-    if (!this.gateClosed && ball.position.x < 468 && ball.position.y < 240) {
+    if (
+      !this.gateClosed &&
+      ball.position.x < 468 &&
+      ball.position.y < 240 &&
+      (this.preset === "authored" ||
+        !Matter.Query.collides(ball, [this.gate]).length)
+    ) {
       this.gateClosed = true;
       this.gate.isSensor = false;
     }
     // A short, fixed step bounds displacement below one ball radius at the speed cap.
     this.limitSpeed();
+    this.telemetry.step(this.balls, this.engine.timing.timestamp);
   }
   kick(target: TargetDefinition, ball = this.ball): void {
     if (!ball) return;
@@ -238,16 +344,26 @@ export class PinballPhysics {
       });
   }
   removeBall(): void {
-    for (const b of this.balls) Composite.remove(this.engine.world, b);
+    for (const b of this.balls) {
+      this.telemetry.finish(b);
+      Composite.remove(this.engine.world, b);
+    }
     this.extraBalls.clear();
     this.incoming.clear();
+    this.slingAt.clear();
+    this.guardAt.clear();
+    this.guardPending.length = 0;
     this.ball = undefined;
     this.launched = false;
   }
   removeSphere(ball: Matter.Body): void {
+    this.telemetry.finish(ball);
     Composite.remove(this.engine.world, ball);
     this.extraBalls.delete(ball.id);
     this.incoming.delete(ball.id);
+    this.slingAt.delete(ball.id);
+    this.guardAt.delete(ball.id);
+    this.guardPending = this.guardPending.filter((p) => p.ball !== ball);
     if (this.ball === ball) {
       this.ball = this.extraBalls.values().next().value;
       if (this.ball) this.extraBalls.delete(this.ball.id);
@@ -301,6 +417,7 @@ export class PinballPhysics {
     Composite.add(this.engine.world, b);
     const angle = -Math.PI / 2 + ((index % 7) - 3) * 0.19;
     Body.setVelocity(b, { x: Math.cos(angle) * 8, y: Math.sin(angle) * 8 });
+    this.telemetry.launch(b, 0, this.engine.timing.timestamp);
     return b;
   }
   dispose(): void {

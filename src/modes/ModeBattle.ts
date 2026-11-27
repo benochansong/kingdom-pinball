@@ -151,6 +151,7 @@ export class ModeBattle {
       }),
     );
     this.extension = {
+      ballProtection: s.kind !== "puzzle" && s.kind !== "customTable" && s.options.variant !== "oneCore",
       canAdvance: () => s.status === "playing",
       regionId: s.options.region,
       bossPhase: () => this.boss?.state.phase ?? 0,

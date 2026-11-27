@@ -1,0 +1,61 @@
+{
+  "notes": "Exploratory basic-input 25-seed cohorts, not final release cohorts. Guard labels indicate normal rebound speed in px/s. Same guide-aware classification. Earlier rectangle-classification pilots were discarded because below-flipper deflections were incorrectly classified as center drains. Final release measurements use 100 seeds per table/power/policy.",
+  "candidates": [
+    {
+      "label": "baseline-audit",
+      "classification": "guide-aware-v2",
+      "n": 300,
+      "left": 86,
+      "right": 61,
+      "center": 0,
+      "returned": 94,
+      "censored": 59,
+      "meanSeconds": 30.619396666666685,
+      "meanFlipperHits": 5.59,
+      "meanBumpers": 14.586666666666666,
+      "early10": 31
+    },
+    {
+      "label": "guard440",
+      "classification": "guide-aware-v2",
+      "n": 300,
+      "left": 94,
+      "right": 98,
+      "center": 0,
+      "returned": 8,
+      "censored": 100,
+      "meanSeconds": 45.687379999999955,
+      "meanFlipperHits": 7.723333333333334,
+      "meanBumpers": 20.69,
+      "early10": 27
+    },
+    {
+      "label": "guard650",
+      "classification": "guide-aware-v2",
+      "n": 300,
+      "left": 50,
+      "right": 40,
+      "center": 0,
+      "returned": 9,
+      "censored": 201,
+      "meanSeconds": 72.89759666666663,
+      "meanFlipperHits": 10.076666666666666,
+      "meanBumpers": 25.113333333333333,
+      "early10": 0
+    },
+    {
+      "label": "guard500",
+      "classification": "guide-aware-v2",
+      "n": 300,
+      "left": 55,
+      "right": 35,
+      "center": 0,
+      "returned": 8,
+      "censored": 202,
+      "meanSeconds": 75.56966333333337,
+      "meanFlipperHits": 9.49,
+      "meanBumpers": 24.37,
+      "early10": 1
+    }
+  ]
+}

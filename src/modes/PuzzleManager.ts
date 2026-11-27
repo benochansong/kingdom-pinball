@@ -148,7 +148,7 @@ export class PuzzleManager {
     w.army.data.queues = {};
     w.objectiveControlled = true;
     w.damageStructure = () => 0;
-    g.configureModeTable([]);
+    g.configureModeTable([], "authored");
     g.enemyMagic = undefined;
     this.board = new PuzzleBoard(g.physics, d);
     host.battle.beforePhysics = () => {

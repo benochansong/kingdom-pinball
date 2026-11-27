@@ -1,6 +1,7 @@
 import { buildingConfig, TERRITORIES } from "../config/buildings";
 import { ECONOMY_TARGETS } from "../config/economy";
 import { RAILS } from "../data/table";
+import { OUTLANE_GUARDS } from "../config/pinball";
 import type { BuildingEntity, BlueprintItem } from "./types";
 export type Point = { x: number; y: number };
 export const snap = (v: number) => Math.round(v / 10) * 10;
@@ -79,6 +80,9 @@ export function fixedBlocked(
     p.x > 522 - pad ||
     p.y < 60 + pad ||
     p.y > 748 ||
+    OUTLANE_GUARDS.some(
+      (g) => Math.hypot(p.x - g.x, p.y - g.y) < g.radius + pad,
+    ) ||
     targets.some((t) => Math.hypot(p.x - t.x, p.y - t.y) < t.radius + pad) ||
     RAILS.some((r) => segmentDistance(p, r.a, r.b) < r.width / 2 + pad)
   );

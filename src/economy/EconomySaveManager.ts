@@ -12,7 +12,8 @@ import type { EconomyData } from "./types";
 import { sanitizeBuildings } from "../building/BuildingSave";
 import { ResourceManager } from "./ResourceManager";
 import { sanitizeArmy } from "../army/MilitarySaveManager";
-import {sanitizeMagic} from "../magic/MagicSave";
+import { sanitizeMagic } from "../magic/MagicSave";
+import { sanitizeProtection } from "../systems/BallProtection";
 export const ECONOMY_KEY = "kingdom-pinball:economy:v2";
 export const amounts = (value = 0): ResourceAmounts =>
   Object.fromEntries(RESOURCE_IDS.map((r) => [r, value])) as ResourceAmounts;
@@ -225,6 +226,7 @@ export function sanitizeEconomy(raw: unknown): EconomyData | null {
   data.building = sanitizeBuildings(input.building);
   data.army = sanitizeArmy(input.army);
   data.magic = sanitizeMagic(input.magic);
+  data.pinball = sanitizeProtection(input.pinball, data.time);
   const capacity = new ResourceManager(data);
   for (const r of RESOURCE_IDS)
     data.resources[r] = finite(

@@ -1,3 +1,4 @@
+import { pinballDifficulty, type PinballDifficulty } from "../config/pinball";
 export const QUALITIES = ["low", "medium", "high", "ultra"] as const;
 export type Quality = (typeof QUALITIES)[number];
 export const KEY_DEFAULTS = {
@@ -14,6 +15,7 @@ export const KEY_DEFAULTS = {
   storm: "KeyK",
 };
 export interface PresentationSettings {
+  pinballDifficulty: PinballDifficulty;
   language: "bilingual" | "ko" | "en";
   quality: Quality;
   autoQuality: boolean;
@@ -39,6 +41,7 @@ export interface PresentationSettings {
   keys: typeof KEY_DEFAULTS;
 }
 export const defaultPresentation = (): PresentationSettings => ({
+  pinballDifficulty: "normal",
   language: "bilingual",
   quality: "high",
   autoQuality: true,
@@ -67,6 +70,7 @@ export function sanitizePresentation(raw: unknown): PresentationSettings {
   const d = defaultPresentation();
   if (!raw || typeof raw !== "object") return d;
   const r = raw as Record<string, unknown>;
+  d.pinballDifficulty = pinballDifficulty(r.pinballDifficulty);
   for (const k of [
     "autoQuality",
     "reduceFlash",

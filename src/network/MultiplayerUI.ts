@@ -10,6 +10,7 @@ import {
 } from "./protocol";
 import { ONLINE_TARGETS } from "./table";
 import { RAILS } from "../data/table";
+import { drawOutlaneGuards } from "../scenes/TableArt";
 import { BUILDINGS, buildingConfig } from "../config/buildings";
 import { UNITS, FORMATIONS } from "../config/army";
 import { ELEMENTS, SPELLS } from "../config/magic";
@@ -169,7 +170,8 @@ export class MultiplayerUI {
   private connect() {
     if (this.client?.connected) return;
     const configured = import.meta.env.VITE_GAME_SERVER_URL as
-      string | undefined;
+      | string
+      | undefined;
     const url =
       configured ||
       (import.meta.env.DEV ? `ws://${location.hostname}:8787/ws` : "");
@@ -586,6 +588,22 @@ export class MultiplayerUI {
         ? `전투까지 ${Math.ceil(s.preparation - s.time / 1000)}초 · 두 명 모두 동의하면 조기 시작`
         : "전투 진행 중 · 개인 일시정지 없음",
     );
+    const protection = s.self.protection;
+    if (protection) {
+      const seconds = Math.max(
+        0,
+        ((protection.expiresAt ?? s.time) - s.time) / 1000,
+      );
+      const status =
+        protection.enteredAt === null
+          ? "진입 대기"
+          : protection.remaining && seconds > 0
+            ? `${seconds.toFixed(1)}초`
+            : "EXPIRED";
+      const el = this.root.querySelector<HTMLElement>("[data-charge]");
+      if (el)
+        el.textContent += ` · NORMAL BALL SAVE ${status} / ${protection.remaining}회 · L ${protection.left ? "KICKBACK READY" : protection.leftHits} / R ${protection.right ? "KICKBACK READY" : protection.rightHits}`;
+    }
     const producer =
         this.root.querySelector<HTMLSelectElement>("[data-producer]")!,
       options = s.self.buildings.filter(
@@ -686,14 +704,16 @@ export class MultiplayerUI {
       c.fillStyle = glow;
       c.fillRect(12, 12, 576, 876);
       c.strokeStyle = "#b9bd9e";
-      c.lineCap = "round";
+      c.lineCap = "butt";
       for (const rail of RAILS) {
+        const a = Math.atan2(rail.b[1] - rail.a[1], rail.b[0] - rail.a[0]);
         c.lineWidth = rail.width;
         c.beginPath();
-        c.moveTo(...rail.a);
-        c.lineTo(...rail.b);
+        c.moveTo(rail.a[0] - Math.cos(a) * 4, rail.a[1] - Math.sin(a) * 4);
+        c.lineTo(rail.b[0] + Math.cos(a) * 4, rail.b[1] + Math.sin(a) * 4);
         c.stroke();
       }
+      drawOutlaneGuards(c);
       c.font = "13px Georgia";
       c.textAlign = "center";
       for (const t of ONLINE_TARGETS) {

@@ -1,3 +1,15 @@
+#ball-protection {
+  position: static;
+  padding: .45rem .7rem;
+  font-size: .75rem;
+  line-height: 1.5;
+  color: #f0d68d;
+  background: #183d34;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  text-align: center;
+}
+#ball-protection[hidden] { display: none; }
 :root {
   font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
   color: #d7dfd2;

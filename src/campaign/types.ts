@@ -111,6 +111,7 @@ export interface CampaignProfile {
   stock: Cost;
 }
 export interface SessionExtension {
+  ballProtection?: boolean;
   flatBoard?: boolean;
   canAdvance?(): boolean;
   regionId?: string;

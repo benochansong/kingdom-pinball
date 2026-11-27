@@ -63,7 +63,7 @@ export class PresentationUI {
       .querySelector(".table-section")!
       .insertAdjacentHTML(
         "afterbegin",
-        '<div id="focus-objective" role="status"></div>',
+        '<div id="focus-objective" role="status"></div><div id="ball-protection" role="status"></div>',
       );
     ui.root
       .querySelectorAll<HTMLElement>(
@@ -138,6 +138,12 @@ export class PresentationUI {
         `<fieldset><legend>언어</legend><label class="setting">언어<select data-p="language" aria-label="언어"><option value="bilingual" ${p.language === "bilingual" ? "selected" : ""}>한국어 + English</option><option value="ko" ${p.language === "ko" ? "selected" : ""}>한국어</option><option value="en" ${p.language === "en" ? "selected" : ""}>English</option></select></label><p>English: 주요 메뉴·설정·조작 안내 지원. 일부 캠페인 설명과 상세 메시지는 한국어로 표시됩니다.</p></fieldset>`,
       );
     this.ui.dialog
+      .querySelector(".settings-tabs")!
+      .insertAdjacentHTML(
+        "afterbegin",
+        `<fieldset><legend>핀볼 난이도 · PINBALL</legend>${select("pinballDifficulty", "핀볼 보호 난이도", ["beginner", "normal", "expert"], p.pinballDifficulty)}<p>새 게임부터 적용 · 전쟁 난이도와 별도. 초보자 12초/2회 · 일반 8초/1회 · 전문가 3초/1회. 첫 공은 15/10/3초. 온라인은 모두 NORMAL. 퍼즐·커스텀 테이블·단일 코어는 고유 규칙을 따릅니다.</p></fieldset>`,
+      );
+    this.ui.dialog
       .querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-p]")
       .forEach((input) =>
         input.addEventListener("input", () => {
@@ -197,6 +203,21 @@ export class PresentationUI {
       p.ui === "simple" ? "SIMPLE UI" : "ADVANCED UI",
     );
     const s = this.modes.active ? this.modes.session : null;
+    const protection = g.protection,
+      d = protection.data;
+    const active = d.remaining > 0 && protection.seconds(g.time) > 0;
+    const saveText =
+      d.enteredAt === null
+        ? "BALL SAVE · 진입 대기"
+        : active
+          ? `BALL SAVE ACTIVE · ${protection.seconds(g.time).toFixed(1)}초`
+          : "BALL SAVE EXPIRED";
+    const protectionHud = root.querySelector<HTMLElement>("#ball-protection")!;
+    protectionHud.hidden = g.state === "menu" || g.state === "over";
+    protectionHud.textContent =
+      g.sessionExtension?.ballProtection === false
+        ? "도전 규칙 · 추가 핀볼 보호 없음"
+        : `${d.difficulty.toUpperCase()} · ${saveText} · 무료 ${d.remaining}회 · L ${d.left ? "KICKBACK READY" : `${d.leftHits} 충전`} / R ${d.right ? "KICKBACK READY" : `${d.rightHits} 충전`}`;
     const ballObjective: Record<string, string> = {
       ready: "공 발사 준비 완료 · Space를 눌렀다가 놓으세요.",
       charging: "Space를 놓아 공을 발사하세요.",
@@ -254,6 +275,15 @@ export class PresentationUI {
           remaining: g.remaining,
           energy: g.economy?.data.resources.energy,
           launcher: g.economy?.data.launchState,
+          difficulty: d.difficulty,
+          protection: d,
+          pinball: g.physics.telemetry.summary(),
+          protectedRunSeconds: g.protectedRuns,
+          produced: g.economy?.data.produced,
+          lastFlipper: g.physics.telemetry.lastFlipper,
+          lastBumper: g.physics.telemetry.lastBumper,
+          latestDrain: g.physics.telemetry.records.at(-1),
+          collisions: g.physics.telemetry.contacts.slice(-4),
           events: g.ballLog.slice(-4),
         });
     }

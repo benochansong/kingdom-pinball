@@ -28,7 +28,7 @@ export class EffectsManager {
   >();
   private disposers: (() => void)[];
   private popups = new Set<Phaser.GameObjects.Text>();
-  private freeText:Phaser.GameObjects.Text[]=[];
+  private freeText: Phaser.GameObjects.Text[] = [];
   constructor(
     private scene: Phaser.Scene,
     private game: GameStateManager,
@@ -71,6 +71,16 @@ export class EffectsManager {
         );
       }),
       game.events.on("launch", () => this.burst(554, 800, 0x91e2ef, 16)),
+      game.events.on("ballProtection", ({ kind, x, y }) => {
+        this.flashes.set(`protection-${kind}`, {
+          alpha: 0.65,
+          x,
+          y,
+          radius: 24,
+          color: kind === "save" ? 0x91e2ef : 0xffdc81,
+        });
+        this.burst(x, y, 0xffdc81, 8);
+      }),
       game.events.on("production", (p) => {
         if (p.amount <= 0) return;
         const resource = RESOURCES[p.resource];
@@ -127,17 +137,24 @@ export class EffectsManager {
   }
   popup(x: number, y: number, label: string, color: string): void {
     if (this.popups.size >= 16) return;
-    const text = this.freeText.pop()??this.scene.add
-      .text(x, y, label, {
-        fontFamily: "Georgia, serif",
-        fontSize: "21px",
-        color,
-        stroke: "#102321",
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5)
-      .setDepth(30);
-    text.setPosition(x,y).setText(label).setColor(color).setAlpha(1).setVisible(true);
+    const text =
+      this.freeText.pop() ??
+      this.scene.add
+        .text(x, y, label, {
+          fontFamily: "Georgia, serif",
+          fontSize: "21px",
+          color,
+          stroke: "#102321",
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setDepth(30);
+    text
+      .setPosition(x, y)
+      .setText(label)
+      .setColor(color)
+      .setAlpha(1)
+      .setVisible(true);
     this.popups.add(text);
     this.scene.tweens.add({
       targets: text,
@@ -147,7 +164,8 @@ export class EffectsManager {
       ease: "Cubic.easeOut",
       onComplete: () => {
         this.popups.delete(text);
-        text.setVisible(false);this.freeText.push(text);
+        text.setVisible(false);
+        this.freeText.push(text);
       },
     });
   }
@@ -237,14 +255,16 @@ export class EffectsManager {
     this.flashes.clear();
     this.popups.forEach((p) => {
       this.scene.tweens.killTweensOf(p);
-      p.setVisible(false);this.freeText.push(p);
+      p.setVisible(false);
+      this.freeText.push(p);
     });
     this.popups.clear();
   }
   dispose(): void {
     this.disposers.forEach((fn) => fn());
     this.clear();
-    this.freeText.forEach(t=>t.destroy());this.freeText=[];
+    this.freeText.forEach((t) => t.destroy());
+    this.freeText = [];
     this.graphics.destroy();
   }
 }

@@ -139,6 +139,9 @@ export class AudioManager {
         );
       }),
       bus.on("flipper", () => this.tone(95, 0.065, "triangle", 0.25, 35)),
+      bus.on("ballProtection", ({kind}) => {
+        this.tone(kind === "save" ? 660 : 220, .16, "triangle", .12, kind === "save" ? 880 : 740);
+      }),
       bus.on("launch", ({ power }) => {
         this.tone(120 + power * 100, 0.28, "sawtooth", 0.13, 900);
         this.tone(740, 0.3, "sine", 0.12, 230);

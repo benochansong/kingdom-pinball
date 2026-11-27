@@ -166,6 +166,7 @@ export class ServerSimulation {
         id === "steel" || MAGIC_RESEARCH.some((r) => r.id === id)
           ? null
           : "알 수 없는 마법";
+      void g.protection;
       g.physics.onHit = ({ target, normalSpeed, ball }) => {
         g.physics.kick(target, ball);
         if (
@@ -177,14 +178,21 @@ export class ServerSimulation {
           return;
         const score = g.score.hit(target, g.time, true);
         if (!score) return;
+        g.protection.hit(target.id, target.x, g.time);
         this.hits[i]++;
         g.magic!.charge(0, 2, 1);
-        g.economy!.harvest(
+        const production = g.economy!.harvest(
           target.id,
           normalSpeed,
           true,
           g.magic!.rewardFactor(ball, target.kind),
         );
+        if (production)
+          g.physics.telemetry.production(
+            ball,
+            production.facility.resource,
+            production.amount - production.overflow,
+          );
         g.army!.hit(target.id, g.time, normalSpeed, true);
         g.magic!.validHit(target.id, target.kind, ball);
         if (target.id.startsWith("online-")) this.hitSupport(i, target.id);
@@ -695,6 +703,7 @@ export class ServerSimulation {
           );
         g.score.combo.tick(this.time);
         g.physics.step(PHYSICS.stepMs / 1000, !g.tilt.tilted);
+        g.updateProtection();
         g.magic!.tick(PHYSICS.stepMs / 1000);
         g.magic!.balls!.recover(PHYSICS.stepMs / 1000, this.time);
         g.magic!.balls!.drain(this.time);
@@ -713,13 +722,15 @@ export class ServerSimulation {
           g.recovery.reset();
         }
         if (g.physics.ball && g.physics.ball.position.y > PHYSICS.drainY) {
-          g.physics.removeBall();
-          g.magic!.endMulti();
-          g.clearInputs();
-          g.score.combo.reset();
-          this.lost[i]++;
-          g.economy!.loseBall();
-          this.respawn[i] = this.time + 800;
+          if (!g.tryBallSave()) {
+            g.physics.removeBall();
+            g.magic!.endMulti();
+            g.clearInputs();
+            g.score.combo.reset();
+            this.lost[i]++;
+            g.economy!.loseBall();
+            this.respawn[i] = this.time + 800;
+          }
         }
         if (!g.physics.ball && g.economy!.data.launchState === "inflight") {
           g.clearInputs();
@@ -728,11 +739,13 @@ export class ServerSimulation {
           this.respawn[i] = this.time + 800;
         }
         if (!g.physics.ball && this.time >= this.respawn[i]) {
+          const paid = g.economy!.data.launchState !== "ready";
           if (
             g.economy!.data.launchState === "ready" ||
             g.economy!.payRelaunch()
           ) {
             g.physics.spawn();
+            if (paid) g.nextBallProtection();
             g.tilt.reset();
             g.recovery.reset();
           } else {
@@ -875,6 +888,7 @@ export class ServerSimulation {
         score: g.score.score,
         energyWait: Math.max(0, this.respawn[seat] - this.time),
         launched: g.physics.launched,
+        protection: { ...g.protection.data },
       },
       opponent: table(other),
       battlefield: {

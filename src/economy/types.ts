@@ -19,6 +19,7 @@ export interface SpecialState {
 }
 import type { MagicData } from "../magic/types";
 export interface EconomyData {
+  pinball?: import("../systems/BallProtection").ProtectionData;
   magic?: MagicData;
   version: 4;
   army?: ArmyData;
