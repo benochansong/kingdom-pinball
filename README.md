@@ -1,12 +1,14 @@
 # KINGDOM PINBALL
 
-**Bounce, Build, Conquer!** — GREENWOOD KINGDOM에서 플레이하는 중세 판타지 핀볼. PHASE 1 코어 엔진, PHASE 2 경제, PHASE 3 왕국 건설, PHASE 4 군대·훈련, PHASE 5 독립 왕국 전쟁, PHASE 6 마법·멀티볼, PHASE 7 대륙 정복 캠페인을 구현했습니다.
+**Bounce, Build, Conquer!** — GREENWOOD KINGDOM에서 플레이하는 중세 판타지 핀볼. PHASE 1 코어 엔진, PHASE 2 경제, PHASE 3 왕국 건설, PHASE 4 군대·훈련, PHASE 5 독립 왕국 전쟁, PHASE 6 마법·멀티볼, PHASE 7 대륙 정복 캠페인과 PHASE 8 반복 플레이 모드를 구현했습니다.
 
 전쟁은 메인 메뉴의 **KINGDOM WAR**에서 시작합니다. 5개 적 왕국, 3개 전쟁 유형, 실제 경제와 생산에 기반한 침공, 성벽·왕궁 파괴, 수리·재건 및 별도 저장을 지원합니다. L 지휘소, 1~7 명령, U 군대, F 진형, B 준비 건설. [구현·검증·성능 한계](docs/PHASE5.md)를 참고하세요.
 
 마법은 실제 시설·왕국 등급·연구로 해금합니다. ZXCV 스피어, G/H 주문, J 멀티볼, K CORE STORM, Tab 연구·편성. 메인 메뉴의 MAGIC TRAINING은 실제 왕국과 분리된 6개 연습 전장입니다. [마법 구현·검증](docs/PHASE6.md).
 
 캠페인은 **NEW CAMPAIGN / CONTINUE CAMPAIGN**에서 시작합니다. 8개 지역·24개 스테이지, 분기 해금, 지역 장치와 보스, 3개 저장 슬롯, 영토·연구·장군·장비, 엔딩과 별도 슬롯 NG+를 제공합니다. [캠페인 구현·검증·성능 제한](docs/PHASE7.md).
+
+**GAME MODES**에서 생존·샌드박스·8보스 러시·30퍼즐·3막 로그라이크·테이블 제작기·일일/주간 도전·사용자 정의 전쟁·AI 관전을 선택합니다. 모드별 저장, 프로젝트 10슬롯, 프로필·칭호·외형을 제공합니다. [모드 구현·검증·제한](docs/PHASE8.md).
 
 ## 실행
 

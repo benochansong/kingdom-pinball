@@ -359,10 +359,12 @@ export class GameStateManager {
     combat.sphereFactor = (u) => this.magic!.sphereFactor(u);
     combat.onSphereContact = (u, n) => this.magic!.direct(u, n);
     if (this.war)
-      this.war.onHarvest = (id) => this.enemyMagic?.validHit(id, id);
+      this.war.onHarvest = (id, side = "enemy") =>
+        (side === "ally" ? this.magic : this.enemyMagic)?.validHit(id, id);
     if (this.war)
       this.war.damageFilter = (s, n) =>
-        this.enemyMagic!.damageFilter(s, this.magic!.damageFilter(s, n));
+        this.enemyMagic?.damageFilter(s, this.magic!.damageFilter(s, n)) ??
+        this.magic!.damageFilter(s, n);
   }
   private bindArmy() {
     if (!this.army) return;
@@ -738,7 +740,18 @@ export class GameStateManager {
       });
     }
   }
+  configureModeTable(targets: import("../data/table").TargetDefinition[]) {
+    if (!this.sessionExtension) return false;
+    this.magic?.endMulti();
+    this.physics.dispose();
+    this.physics = new PinballPhysics(targets);
+    this.bindPhysics();
+    this.bindMagic();
+    this.physics.spawn();
+    return true;
+  }
   update(frameMs: number): void {
+    if (this.sessionExtension?.canAdvance?.() === false) return;
     if (this.testBall) {
       this.testBall.update(frameMs);
       return;

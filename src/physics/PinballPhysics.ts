@@ -11,6 +11,8 @@ export interface Contact {
   normalSpeed: number;
 }
 export class PinballPhysics {
+  maxSpeed: number = PHYSICS.maxSpeed;
+  bumperFactor = 1;
   readonly engine = Engine.create({
     gravity: { x: 0, y: 1, scale: PHYSICS.gravity },
     positionIterations: 8,
@@ -38,11 +40,15 @@ export class PinballPhysics {
   private targets = new Map<number, TargetDefinition>();
   private incoming = new Map<number, { x: number; y: number }>();
   private nextTargets: TargetDefinition[];
-  addTarget(target:TargetDefinition){
-    if(this.nextTargets.some(t=>t.id===target.id))return;
-    this.nextTargets=[...this.nextTargets,target];this.setTargetEnabled(target.id,true);
+  addTarget(target: TargetDefinition) {
+    if (this.nextTargets.some((t) => t.id === target.id)) return;
+    this.nextTargets = [...this.nextTargets, target];
+    this.setTargetEnabled(target.id, true);
   }
-  removeTarget(id:string){this.setTargetEnabled(id,false);this.nextTargets=this.nextTargets.filter(t=>t.id!==id);}
+  removeTarget(id: string) {
+    this.setTargetEnabled(id, false);
+    this.nextTargets = this.nextTargets.filter((t) => t.id !== id);
+  }
   setTargetEnabled(id: string, enabled: boolean) {
     const target = this.nextTargets.find((t) => t.id === id);
     if (!target) return;
@@ -216,7 +222,7 @@ export class PinballPhysics {
       dy = ball.position.y - target.y;
     const d = Math.max(1, Math.hypot(dx, dy));
     const outward = ((ball.velocity.x * dx + ball.velocity.y * dy) / d) * 60;
-    const impulse = Math.max(0, target.kick - outward);
+    const impulse = Math.max(0, target.kick * this.bumperFactor - outward);
     Body.setVelocity(ball, {
       x: ball.velocity.x + ((dx / d) * impulse) / 60,
       y: ball.velocity.y + ((dy / d) * impulse) / 60,
@@ -225,10 +231,10 @@ export class PinballPhysics {
   limitSpeed(ball = this.ball): void {
     if (!ball) return;
     const speed = ball.speed * 60;
-    if (speed > PHYSICS.maxSpeed)
+    if (speed > this.maxSpeed)
       Body.setVelocity(ball, {
-        x: (ball.velocity.x * PHYSICS.maxSpeed) / speed,
-        y: (ball.velocity.y * PHYSICS.maxSpeed) / speed,
+        x: (ball.velocity.x * this.maxSpeed) / speed,
+        y: (ball.velocity.y * this.maxSpeed) / speed,
       });
   }
   removeBall(): void {

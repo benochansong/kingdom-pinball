@@ -31,7 +31,8 @@ export class WarRenderer {
     g.clear();
     this.labels.forEach((l) => l.setVisible(false));
     const w = this.game.war;
-    if (!w || this.game.testBall) return;
+    if (!w || this.game.testBall || this.game.sessionExtension?.flatBoard)
+      return;
     g.fillStyle(0x892f30, 0.14);
     g.fillRoundedRect(85, 90, 420, 215, 20);
     g.lineStyle(1, 0xe0bd78, 0.25);

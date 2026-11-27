@@ -1,0 +1,11 @@
+{
+  "method": "60 simulated minutes; fixed 240 Hz game loop, idle launcher, protected player structures, test damage clears enemies every 5 seconds. Not a manual balance or browser FPS measurement.",
+  "simulatedSeconds": 3600.145833292968,
+  "wallMs": 81581,
+  "waves": 75,
+  "rewards": 74,
+  "maxStoredUnits": 28,
+  "maxSpawnQueue": 100,
+  "maxMatterBodies": 44,
+  "saveBytes": 33853
+}

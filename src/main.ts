@@ -1,3 +1,7 @@
+import { TableCreatorUI } from "./ui/TableCreatorUI";
+import { GameModeManager } from "./modes/GameModeManager";
+import { ModeUI } from "./ui/ModeUI";
+import "./modes.css";
 import {
   createCampaignLab,
   createCampaignLabSave,
@@ -55,6 +59,9 @@ const campaign = new CampaignManager(
   campaignLab ? createCampaignLabSave() : undefined,
 );
 const campaignUI = new CampaignUI(ui, campaign);
+const modes = new GameModeManager(model);
+const modeUI = new ModeUI(ui, modes);
+const creatorUI = new TableCreatorUI(ui, modes);
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game-canvas",
@@ -65,7 +72,7 @@ const game = new Phaser.Game({
   banner: false,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   fps: { target: 60 },
-  scene: [new PinballScene(model, audio, () => ui.render(), campaign)],
+  scene: [new PinballScene(model, audio, () => ui.render(), campaign, modes)],
 });
 const disposeLab = campaignLab
   ? mountCampaignLab(campaign, ui, game)
@@ -90,6 +97,12 @@ const controlCodes = [
 window.addEventListener(
   "keydown",
   (event) => {
+    if (
+      modes.active &&
+      modes.session.kind === "spectator" &&
+      !["Escape", "KeyM"].includes(event.code)
+    )
+      return;
     if (magicUI.handleKey(event)) return;
     if (warUI.handleKey(event)) return;
     if (buildUI.handleKey(event)) return;
@@ -194,6 +207,16 @@ window.addEventListener(
       );
       return;
     }
+    if (modes.active) {
+      if (event.key && modes.saves.conflict(event.key)) {
+        model.pause();
+        ui.message(
+          "다른 창에서 저장한 모드를 보호합니다. 다시 불러오세요.",
+          "gold",
+        );
+      }
+      return;
+    }
     if (campaign.active) return;
     if (
       model.mode === "kingdom" &&
@@ -213,6 +236,8 @@ if (import.meta.hot)
     buildUI.dispose();
     armyUI.dispose();
     campaignUI.dispose();
+    modeUI.dispose();
+    creatorUI.dispose();
     magicUI.dispose();
     warUI.dispose();
     disposeLab?.();

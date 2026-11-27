@@ -7,6 +7,7 @@ export class FlipperController {
   angle: number;
   angularVelocity = 0;
   held = false;
+  strength = 1;
   readonly rest: number;
   readonly raised: number;
   constructor(readonly side: "left" | "right") {
@@ -65,8 +66,10 @@ export class FlipperController {
       x: contact.x + nx * (radius + 0.15),
       y: contact.y + ny * (radius + 0.15),
     });
-    const surfaceX = -this.angularVelocity * (contact.y - this.pivot.y);
-    const surfaceY = this.angularVelocity * (contact.x - this.pivot.x);
+    const surfaceX =
+      -this.angularVelocity * this.strength * (contact.y - this.pivot.y);
+    const surfaceY =
+      this.angularVelocity * this.strength * (contact.x - this.pivot.x);
     const vx = ball.velocity.x * 60;
     const vy = ball.velocity.y * 60;
     const normalVelocity = (vx - surfaceX) * nx + (vy - surfaceY) * ny;

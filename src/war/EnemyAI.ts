@@ -7,20 +7,41 @@ import { scaleCost } from "../building/BuildingManager";
 import { maxHp } from "../army/DamageCalculator";
 import type { Strategy } from "./types";
 export class EnemyAI {
-  constructor(private war: WarManager) {}
+  constructor(
+    private war: WarManager,
+    readonly side: "ally" | "enemy" = "enemy",
+    private override?: {
+      state: WarManager["data"]["ai"];
+      faction: WarManager["data"]["options"]["enemy"];
+      difficulty: WarManager["data"]["options"]["difficulty"];
+    },
+  ) {}
+  private get state() {
+    return this.override?.state ?? this.war.data.ai;
+  }
+  private get faction() {
+    return this.override?.faction ?? this.war.data.options.enemy;
+  }
+  private get rival() {
+    return this.side === "enemy" ? this.war.army : this.war.enemyArmy;
+  }
+  private enemyY(y: number) {
+    return this.side === "enemy" ? y : 900 - y;
+  }
   update() {
     const w = this.war,
       d = w.data,
-      a = d.ai,
-      e = w.enemy,
-      army = w.enemyArmy,
-      faction = ENEMIES[d.options.enemy],
-      difficulty = DIFFICULTIES[d.options.difficulty];
+      a = this.state,
+      e = w.economy(this.side),
+      army = w.troops(this.side),
+      faction = ENEMIES[this.faction],
+      difficulty =
+        DIFFICULTIES[this.override?.difficulty ?? d.options.difficulty];
     if (w.now >= a.nextHarvest) {
       a.nextHarvest = w.now + 3000 / (difficulty.production * faction.economy);
       const options = FACILITIES.filter(
         (f) =>
-          w.facilityFactor("enemy", f.target) > 0 &&
+          w.facilityFactor(this.side, f.target) > 0 &&
           e.resources.space(f.resource) > 0,
       ).sort(
         (a, b) =>
@@ -30,32 +51,32 @@ export class EnemyAI {
       const f = options[a.harvestIndex++ % Math.min(3, options.length)];
       if (f) {
         e.data.launchState = "inflight";
-        if (e.harvest(f.target, 300, true)) w.onHarvest(f.target);
+        if (e.harvest(f.target, 300, true)) w.onHarvest(f.target, this.side);
       }
     }
     if (w.now < a.nextThink) return;
     a.nextThink = w.now + 4000;
-    const castle = w.castle("enemy"),
+    const castle = w.castle(this.side),
       ratio = castle.hp / castle.maxHp;
     if (
       !w.preparing &&
-      army.living.some((u) => u.squad === "scout" && u.y > 350)
+      army.living.some((u) => u.squad === "scout" && this.enemyY(u.y) > 350)
     )
-      w.scout("enemy");
+      w.scout(this.side);
     if (
       !w.preparing &&
-      w.army.living.some((u) => u.y < 300) &&
+      this.rival.living.some((u) => this.enemyY(u.y) < 300) &&
       d.structures.some(
-        (s) => s.side === "enemy" && s.type === "watchtower" && s.hp > 0,
+        (s) => s.side === this.side && s.type === "watchtower" && s.hp > 0,
       )
     )
-      w.scout("enemy");
+      w.scout(this.side);
     let desired: Strategy =
       ratio < 0.25
         ? "emergency"
-        : d.structures.some((s) => s.side === "enemy" && s.hp < s.maxHp * 0.5)
+        : d.structures.some((s) => s.side === this.side && s.hp < s.maxHp * 0.5)
           ? "recovery"
-          : w.army.living.some((u) => u.y < 280)
+          : this.rival.living.some((u) => this.enemyY(u.y) < 280)
             ? "defense"
             : e.data.rank < 2
               ? "economy"
@@ -67,7 +88,7 @@ export class EnemyAI {
                     ? "military"
                     : w.now < d.options.preparation * 1000 + 20000
                       ? "recon"
-                      : d.options.enemy === "shadow"
+                      : this.faction === "shadow"
                         ? "raid"
                         : "military";
     if (
@@ -89,7 +110,7 @@ export class EnemyAI {
       w.onSound("castle");
     }
     const damaged = d.structures
-      .filter((s) => s.side === "enemy" && s.hp < s.maxHp * 0.65)
+      .filter((s) => s.side === this.side && s.hp < s.maxHp * 0.65)
       .sort(
         (a, b) =>
           (a.castle ? -2 : 0) -
@@ -98,10 +119,10 @@ export class EnemyAI {
           b.hp / b.maxHp,
       );
     if (damaged[0] && e.data.resources.gold > 35)
-      w.repair(damaged[0].id, ratio < 0.25, "enemy");
+      w.repair(damaged[0].id, ratio < 0.25, this.side);
     if (w.now > 12000) {
       const low = FACILITIES.filter(
-        (f) => w.facilityFactor("enemy", f.target) > 0,
+        (f) => w.facilityFactor(this.side, f.target) > 0,
       ).sort(
         (a, b) => e.data.facilities[a.id].level - e.data.facilities[b.id].level,
       );
@@ -115,7 +136,7 @@ export class EnemyAI {
       )
     )
       e.upgradeStorage();
-    if (d.options.enemy === "golden" || e.data.resources.food < army.upkeep) {
+    if (this.faction === "golden" || e.data.resources.food < army.upkeep) {
       const trade = TRADES.find((t) => t.to === "food" && t.from === "gold");
       if (trade) e.market.trade(trade.id, Math.min(2, e.market.max(trade.id)));
     }
@@ -131,7 +152,7 @@ export class EnemyAI {
       return (
         e.data.rank >= c.rank &&
         !army.buildings.some((b) => b.type === type) &&
-        !d.work.some((x) => x.side === "enemy" && x.type === type)
+        !d.work.some((x) => x.side === this.side && x.type === type)
       );
     });
     if (available) {
@@ -141,7 +162,8 @@ export class EnemyAI {
         { x: 110, y: 230 },
         { x: 480, y: 230 },
       ])
-        if (!w.queueBuild("enemy", available, p)) break;
+        if (!w.queueBuild(this.side, available, { ...p, y: this.enemyY(p.y) }))
+          break;
     }
     const barracks = army.buildings.find(
       (b) => b.type === "barracks" && !b.disabled,
@@ -210,11 +232,11 @@ export class EnemyAI {
       }
       const observed = a.intel && w.now - a.intel.at < 90000;
       a.lane =
-        d.options.enemy === "shadow"
+        this.faction === "shadow"
           ? observed && a.intel!.lane === "left"
             ? "right"
             : "left"
-          : d.options.enemy === "crimson"
+          : this.faction === "crimson"
             ? a.wave % 2
               ? "right"
               : "center"
@@ -270,7 +292,7 @@ export class EnemyAI {
       const near = army.living.filter(
         (u) => Math.hypot(u.x - commander.x, u.y - commander.y) < 150,
       );
-      switch (d.options.enemy) {
+      switch (this.faction) {
         case "iron":
           army.data.buffs.shield = w.now + 8000;
           break;
@@ -297,14 +319,14 @@ export class EnemyAI {
   }
   get tactic(): string {
     const w = this.war,
-      a = w.data.ai,
-      units = w.enemyArmy.living;
+      a = this.state,
+      units = w.troops(this.side).living;
     if (a.strategy === "emergency") return "LAST STAND";
     if (a.strategy === "recovery") return "EMERGENCY RETREAT";
     if (units.some((u) => u.kind === "catapult") && a.strategy === "siege")
       return "SIEGE ASSAULT";
     if (a.strategy === "defense") return "DEFENSIVE WALL";
-    if (w.data.options.enemy === "shadow")
+    if (this.faction === "shadow")
       return units.some((u) => u.kind === "knight")
         ? "FLANK ATTACK"
         : "ECONOMIC RAID";

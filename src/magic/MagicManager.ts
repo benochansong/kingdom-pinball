@@ -19,6 +19,7 @@ import { BallManager } from "./BallManager";
 import { StatusEffectManager } from "./StatusEffectManager";
 type Target = UnitEntity | Structure;
 export class MagicManager {
+  automatedFaction?: import("../war/types").EnemyKind;
   readonly data: MagicData;
   readonly balls?: BallManager;
   readonly status: StatusEffectManager;
@@ -756,17 +757,20 @@ export class MagicManager {
   }
   private enemyAI() {
     const w = this.game.war;
-    if (this.side !== "enemy" || !w) return;
+    if ((this.side !== "enemy" && !this.automatedFaction) || !w) return;
     const pending = this.data.enemyCast;
     if (pending && this.now >= pending.at) {
       this.data.enemyCast = null;
       const error = this.cast(pending.spell, pending);
       if (!error)
-        w.notice("enemySpell", `적 마법 발동 · ${spell(pending.spell).name}`);
+        w.notice(
+          "enemySpell",
+          `${this.side === "ally" ? "아군" : "적"} 마법 발동 · ${spell(pending.spell).name}`,
+        );
     }
     if (this.now < this.data.nextAI) return;
     this.data.nextAI = this.now + 8000;
-    const faction = w.data.options.enemy,
+    const faction = this.automatedFaction ?? w.data.options.enemy,
       preferred: Spell[] =
         faction === "iron"
           ? ["royalShield"]
@@ -779,14 +783,22 @@ export class MagicManager {
                 : ["frostField", "fireStorm"];
     if (
       !this.has("mysticLibrary") &&
-      !w.data.work.some((j) => j.side === "enemy" && j.type === "mysticLibrary")
+      !w.data.work.some(
+        (j) => j.side === this.side && j.type === "mysticLibrary",
+      )
     )
       for (const p of [
         { x: 110, y: 230 },
         { x: 480, y: 230 },
         { x: 300, y: 290 },
       ])
-        if (!w.queueBuild("enemy", "mysticLibrary", p)) break;
+        if (
+          !w.queueBuild(this.side, "mysticLibrary", {
+            ...p,
+            y: this.side === "ally" ? 900 - p.y : p.y,
+          })
+        )
+          break;
     if (!this.data.task) {
       const next = preferred.find((id) => !this.data.research[id]);
       if (next) this.research(next);
@@ -812,7 +824,7 @@ export class MagicManager {
         };
         w.notice(
           "enemyMagicWarning",
-          `적 ${spell(id).name} · 3초 후 (${Math.round(p.x)}, ${Math.round(p.y)})`,
+          `${this.side === "ally" ? "아군" : "적"} ${spell(id).name} · 3초 후 (${Math.round(p.x)}, ${Math.round(p.y)})`,
         );
         this.effect(p.x, p.y, spell(id).radius, "warning");
         this.save();

@@ -229,7 +229,7 @@ export class WarManager {
   onLayout: () => void = () => {};
   onEnd: () => void = () => {};
   onSound: (kind: string) => void = () => {};
-  onHarvest: (target: string) => void = () => {};
+  onHarvest: (target: string, side?: Side) => void = () => {};
   damageFilter: (s: Structure, amount: number) => number = (_s, amount) =>
     amount;
   canMaterialize: (x: number, y: number, type: string) => boolean = () => true;

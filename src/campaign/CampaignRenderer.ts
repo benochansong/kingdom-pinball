@@ -10,7 +10,10 @@ export class CampaignRenderer {
   private labels: Phaser.GameObjects.Text[] = [];
   constructor(
     private scene: Phaser.Scene,
-    private campaign: CampaignManager,
+    private campaign: Pick<
+      CampaignManager,
+      "game" | "active" | "session" | "terrain" | "boss"
+    >,
   ) {
     this.ink = scene.add.graphics().setDepth(8);
     for (let i = 0; i < 12; i++)
@@ -32,7 +35,7 @@ export class CampaignRenderer {
       s = c.active ? c.session : null;
     this.ink.clear();
     for (const t of this.labels) t.setVisible(false);
-    if (!s || g.testBall) {
+    if (!s || g.testBall || g.sessionExtension?.flatBoard) {
       this.art?.setVisible(false);
       return;
     }

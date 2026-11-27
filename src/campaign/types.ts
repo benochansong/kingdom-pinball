@@ -111,6 +111,8 @@ export interface CampaignProfile {
   stock: Cost;
 }
 export interface SessionExtension {
+  flatBoard?: boolean;
+  canAdvance?(): boolean;
   regionId?: string;
   bossPhase?: () => number;
   beforeStep(dt: number): void;

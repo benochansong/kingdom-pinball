@@ -48,7 +48,8 @@ export class ScoreManager {
         PHYSICS.bumperCooldownMs
     )
       return;
-    if (target.kind === "bonus" && !this.bonusActive) return;
+    if (target.id === "bonus" && target.kind === "bonus" && !this.bonusActive)
+      return;
     this.cooldown.set(target.id, now);
     this.combo.hit(now);
     const points = Math.round(target.points * this.combo.multiplier);
@@ -60,7 +61,8 @@ export class ScoreManager {
       this.bonusActive = true;
       this.visited.clear();
     }
-    if (target.kind === "bonus") this.bonusActive = false;
+    if (target.id === "bonus" && target.kind === "bonus")
+      this.bonusActive = false;
     let royal = false;
     if (target.kind === "palace") {
       this.palaceHits++;

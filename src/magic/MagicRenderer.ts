@@ -11,6 +11,7 @@ export class MagicRenderer {
   constructor(
     scene: Phaser.Scene,
     private game: GameStateManager,
+    private palette?: () => { sphere: number; magic: number },
   ) {
     this.ink = scene.add.graphics().setDepth(19);
     for (let i = 0; i < 10; i++)
@@ -47,7 +48,11 @@ export class MagicRenderer {
         p = b.position;
       v.image
         .setPosition(p.x, p.y)
-        .setTint(c.color)
+        .setTint(
+          state.type === "steel"
+            ? (this.palette?.().sphere ?? c.color)
+            : c.color,
+        )
         .setAlpha(i ? 0.82 : 1);
       v.label.setPosition(p.x, p.y).setText(c.glyph);
       if (this.game.state === "playing") v.trail.push({ ...p });
@@ -85,7 +90,10 @@ export class MagicRenderer {
           .strokeCircle(t.x, t.y, s.kind === "shield" ? 30 : 12);
       }
       for (const e of magic!.effects) {
-        const color = e.type === "warning" ? 0xff6655 : 0xd8c8ff;
+        const color =
+          e.type === "warning"
+            ? 0xff6655
+            : (this.palette?.().magic ?? 0xd8c8ff);
         this.ink.lineStyle(
           2,
           color,
